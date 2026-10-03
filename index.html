@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Marginalia – read novels online</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Jost:wght@400;500;600&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Bai+Jamjuree:wght@400;500;600;700&family=Sarabun:wght@400;600&family=Noto+Serif+Thai:wght@400;600&family=Trirong:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Jost:wght@400;500;600&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Bai+Jamjuree:wght@400;500;600;700&family=Sarabun:wght@400;600&family=Noto+Serif+Thai:wght@400;600&family=Trirong:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Pacifico&family=Mali:wght@500;700&family=Pridi:wght@500;600&display=swap" rel="stylesheet">
 <style>
 :root{--read:"Bai Jamjuree",Literata,Georgia,serif;--bg:#f6f4fb;--card:#fff;--ink:#241b3a;--soft:#6b6485;--line:#ded9ec;--accent:#5b4bdb;--ai:#fff;--size:19px}
 :root[data-theme=dark]{--bg:#14121f;--card:#1d1a2e;--ink:#e8e3f5;--soft:#9d96b8;--line:#2e2a45;--accent:#9c8cff;--ai:#14121f}
@@ -102,6 +102,7 @@ header nav a,.btn,.chip{letter-spacing:.03em}
   <button class="btn" id="themeBtn" type="button">Dark mode</button>
 </div></header>
 <div class="wrap"><main id="app"></main></div>
+<p class="small" style="text-align:center;margin:-50px 0 30px"><a href="#/write">Author login</a></p>
 <dialog class="note" id="noteBox" aria-label="Footnote"></dialog>
 
 <script>
@@ -142,13 +143,42 @@ const SEED = [
 let db = { stories:null, edited:false, lib:[], progress:{}, theme:null, size:19, font:"EB Garamond" };
 try { Object.assign(db, JSON.parse(localStorage.getItem("marginalia2") || "{}")); } catch (e) {}
 if (db.fv !== 2) { db.font = "EB Garamond"; db.fv = 2; }
-const save = () => { try { const o = {...db}; if (!db.edited) o.stories = null; localStorage.setItem("marginalia2", JSON.stringify(o)); } catch (e) { if (!save.warned) { save.warned = true; alert("Your browser storage is full, so recent changes may not be saved. Download a full backup in Write, and use fewer or smaller pictures."); } } };
-const edit = () => { db.edited = true; save(); };
+const save = () => { try { const o = {...db}; o.stories = null; delete o.edited; localStorage.setItem("marginalia2", JSON.stringify(o)); } catch (e) { if (!save.warned) { save.warned = true; alert("Your browser storage is full, so recent changes may not be saved. Download a full backup in Write, and use fewer or smaller pictures."); } } };
+const PW_KEY = "marginalia_admin";
+let pw = localStorage.getItem(PW_KEY) || "", ready = false;
+const isAdmin = () => !!pw;
+const syncNav = () => { const w = document.querySelector("header nav a[data-k=write]"); if (w) w.hidden = !isAdmin(); };
+async function api(body) {
+  const r = await fetch("/api/admin", { method: body ? "POST" : "GET", headers:{ "Content-Type":"application/json", "x-admin-password":pw }, body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401) { pw = ""; localStorage.removeItem(PW_KEY); syncNav(); throw new Error("Wrong password."); }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || "Server error " + r.status);
+  return d;
+}
+async function saveStory(s) {
+  try { await api({ stories: ready ? [s] : db.stories }); ready = true; return true; }
+  catch (e) { alert("Could not save: " + e.message); return false; }
+}
+async function removeStory(id) {
+  try { await api({ delete:id }); db.stories = db.stories.filter(x => x.id !== id); return true; }
+  catch (e) { alert("Could not delete: " + e.message); return false; }
+}
+async function loadStories() {
+  try {
+    let r = pw ? await fetch("/api/admin", { headers:{ "x-admin-password":pw } }) : null;
+    if (r && r.status === 401) { pw = ""; localStorage.removeItem(PW_KEY); syncNav(); r = null; }
+    if (!r || !r.ok) r = await fetch("/api/stories");
+    const d = await r.json();
+    if (d.ready) { ready = true; db.stories = d.stories; return; }
+  } catch (e) {}
+  try { const r = await fetch("stories.json", { cache:"no-cache" }); const d = r.ok ? await r.json() : null; db.stories = (d && Array.isArray(d.stories) ? d.stories : SEED).filter(s => s.published !== false); }
+  catch (e) { db.stories = SEED; }
+}
 
 /* ---------- Helpers ---------- */
 const app = document.getElementById("app"), noteBox = document.getElementById("noteBox"), themeBtn = document.getElementById("themeBtn");
 const getS = id => db.stories.find(s => s.id === id);
-const shown = () => db.stories.filter(s => db.edited || s.published !== false);
+const shown = () => db.stories.filter(s => isAdmin() || s.published !== false);
 const go = h => { location.hash = h; };
 const title = t => { document.title = t; };
 function el(tag, props, ...kids) {
@@ -189,9 +219,40 @@ function applyTheme() {
 }
 themeBtn.addEventListener("click", () => { db.theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; save(); applyTheme(); });
 
+const COVER_FONTS = ["Cormorant Garamond","Playfair Display","Pacifico","Mali","Pridi","Trirong","Bai Jamjuree","Sarabun","Noto Serif Thai","Jost"];
+function hex(h, s, l) { s /= 100; l /= 100; const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, "0"); }; return "#" + f(0) + f(8) + f(4); }
+function autoColors(t) { let h = 0; for (const c of t || "x") h = (h * 31 + c.charCodeAt(0)) % 360; return [hex(h, 80, 84), hex((h + 50) % 360, 75, 74)]; }
 function cover(s) {
-  let h = 0; for (const c of s.title) h = (h * 31 + c.charCodeAt(0)) % 360;
-  return el("div", { class:"cover", style:"background:linear-gradient(160deg,hsl(" + h + " 80% 84%),hsl(" + ((h + 50) % 360) + " 75% 74%))" }, el("span", {}, s.title));
+  const c = s.cover || {}, [a, b] = autoColors(s.title), d = el("div", { class:"cover" });
+  d.style.background = c.image ? (c.hideTitle ? "" : "linear-gradient(transparent 50%,rgba(0,0,0,.6)),") + 'url("' + c.image.replace(/"/g, "%22") + '") center/cover' : "linear-gradient(160deg," + (c.c1 || a) + "," + (c.c2 || b) + ")";
+  if (c.image) { d.style.color = "#fff"; d.style.textShadow = "0 1px 6px rgba(0,0,0,.6)"; }
+  if (c.color) d.style.color = c.color;
+  if (c.font) d.style.fontFamily = '"' + c.font + '","Bai Jamjuree",Georgia,serif';
+  if (!c.hideTitle) d.append(el("span", {}, s.title));
+  return d;
+}
+function coverEditor(ti, cv) {
+  const box = el("div", { class:"nbox" });
+  const render = () => {
+    const [a, b] = autoColors(ti.value), prev = el("div", { style:"width:170px;margin:0 0 12px" });
+    const draw = () => prev.replaceChildren(cover({ title:ti.value.trim() || "Title", cover:cv }));
+    ti.oninput = draw; draw();
+    const color = (label, k, dflt) => { const i = el("input", { type:"color", "aria-label":label }); i.value = cv[k] || dflt; i.addEventListener("input", () => { cv[k] = i.value; draw(); }); return field(label, i); };
+    const font = el("select", { class:"inp", "aria-label":"Title font" }, el("option", { value:"" }, "Default"), COVER_FONTS.map(f => el("option", { value:f }, f)));
+    font.value = cv.font || ""; font.addEventListener("change", () => { cv.font = font.value; draw(); });
+    const show = el("input", { type:"checkbox" }); show.checked = !cv.hideTitle; show.addEventListener("change", () => { cv.hideTitle = !show.checked; draw(); });
+    const pick = el("input", { type:"file", accept:"image/*", "aria-label":"Upload a cover photo", onchange:async e => {
+      const f = e.target.files[0]; if (!f) return;
+      try { cv.image = await shrink(f, 360); render(); } catch (x) { alert("Could not read that picture. Please try a JPG or PNG."); }
+    } });
+    box.replaceChildren(el("h2", { style:"margin-top:0" }, "Cover"), prev,
+      el("div", { class:"f" }, el("span", {}, "Cover photo (optional)"), pick),
+      cv.image ? el("button", { class:"btn", type:"button", style:"margin:0 0 14px", onclick:() => { delete cv.image; render(); } }, "Remove photo") : "",
+      color("Background color 1 (used when there is no photo)", "c1", a), color("Background color 2", "c2", b), color("Title color", "color", "#3f3052"),
+      field("Title font", font), el("label", { class:"f" }, show, " Show the title on the cover"),
+      el("button", { class:"btn", type:"button", style:"margin-top:12px", onclick:() => { Object.keys(cv).forEach(k => delete cv[k]); render(); } }, "Reset cover"));
+  };
+  render(); return box;
 }
 function tile(s, ch) {
   return el("a", { class:"tile", href: ch !== undefined ? "#/read/" + s.id + "/" + ch : "#/story/" + s.id },
@@ -272,10 +333,10 @@ function pStory(id) {
       el("div", { class:"row" },
         s.chapters.length ? el("a", { class:"btn primary", href:"#/read/" + id + "/" + (at || 0) }, at ? "Continue chapter " + (at + 1) : "Start reading") : el("span", { class:"soft" }, "No chapters yet."),
         el("button", { class:"btn", type:"button", onclick:() => { db.lib = inLib ? db.lib.filter(x => x !== id) : [...db.lib, id]; save(); route(); } }, inLib ? "Remove from library" : "Add to library"),
-        el("a", { class:"btn", href:"#/edit/" + id }, "Edit story")))),
+        isAdmin() ? el("a", { class:"btn", href:"#/edit/" + id }, "Edit story") : ""))),
     el("h2", {}, "Chapters (" + s.chapters.length + ")"),
-    el("ul", { class:"chlist" }, s.chapters.map((c, i) => el("li", {}, el("a", { href:"#/read/" + id + "/" + i }, c.title), el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit")))),
-    el("a", { class:"btn primary", href:"#/chapter/" + id + "/new" }, "+ Add chapter"));
+    el("ul", { class:"chlist" }, s.chapters.map((c, i) => el("li", {}, el("a", { href:"#/read/" + id + "/" + i }, c.title), isAdmin() ? el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit") : ""))),
+    isAdmin() ? el("a", { class:"btn primary", href:"#/chapter/" + id + "/new" }, "+ Add chapter") : "");
 }
 
 function pRead(id, n) {
@@ -299,7 +360,7 @@ function pRead(id, n) {
     el("h1", { style:"margin-top:22px" }, c.title), el("p", { class:"meta" }, "by " + s.author),
     el("article", { class:"text" }, c.text.split(/\n+/).filter(Boolean).map(p => el("p", {}, withNotes(p, c.notes || {})))),
     el("div", { class:"nav" }, prev, jump, next),
-    el("p", {}, el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit this chapter")));
+    isAdmin() ? el("p", {}, el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit this chapter")) : "");
 }
 
 function pLibrary() {
@@ -314,21 +375,36 @@ function download(name, list) {
   const b = new Blob([JSON.stringify({ stories:list }, null, 1)], { type:"application/json" });
   el("a", { href:URL.createObjectURL(b), download:name }).click();
 }
+function pLogin() {
+  title("Author login – Marginalia");
+  const p = inp(""); p.type = "password"; p.autocomplete = "current-password";
+  const submit = async () => {
+    if (!p.value) return;
+    pw = p.value;
+    try { await api(); } catch (e) { pw = ""; alert(e.message); return; }
+    localStorage.setItem(PW_KEY, pw); await loadStories(); syncNav(); route();
+  };
+  p.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+  app.replaceChildren(el("h1", {}, "Author login"), el("p", { class:"soft" }, "Only the site owner needs this. Readers never see this page."),
+    field("Password", p), el("button", { class:"btn primary", type:"button", onclick:submit }, "Log in"));
+}
+async function importList(list, msg) {
+  try { await api({ stories:list.map(s => ({ ...s, chapters:s.chapters || [] })) }); ready = true; await loadStories(); flash = msg; route(); }
+  catch (e) { alert("Import failed: " + e.message); }
+}
 function pWrite() {
+  if (!isAdmin()) return pLogin();
   const note = flash; flash = "";
   title("Write – Marginalia");
-  const file = el("input", { type:"file", accept:"application/json", "aria-label":"Choose a backup file", onchange:async e => {
-    try {
-      const d = JSON.parse(await e.target.files[0].text());
-      if (!Array.isArray(d.stories)) throw 0;
-      if (!confirm("Replace the stories in this browser with the ones in this file?")) return;
-      db.stories = d.stories.map(s => ({ ...s, chapters:s.chapters || [] })); edit(); route();
-    } catch (x) { alert("That file is not a valid stories.json."); }
+  let old = null; try { old = JSON.parse(localStorage.getItem("marginalia_old") || "null"); } catch (e) {}
+  const file = el("input", { type:"file", accept:"application/json", "aria-label":"Choose a stories file", onchange: async e => {
+    let d; try { d = JSON.parse(await e.target.files[0].text()); if (!Array.isArray(d.stories)) throw 0; } catch (x) { alert("That file is not a valid stories.json."); return; }
+    if (confirm("Add the " + d.stories.length + " stories in this file to your site? Stories with the same id are replaced.")) importList(d.stories, "Imported " + d.stories.length + " stories.");
   } });
   app.replaceChildren(
     el("h1", {}, "Write"),
     note ? el("p", { class:"help", role:"status" }, note) : "",
-    el("p", { class:"soft" }, "Add and edit stories here. Your changes are saved in this browser only, until you publish them (see Backup & publish below)."),
+    el("p", { class:"soft" }, "Everything you save here goes live immediately. Stories marked ส่วนตัว are visible only to you."),
     el("div", { class:"row" }, el("a", { class:"btn primary", href:"#/edit/new" }, "+ New story")),
     el("h2", {}, "Your stories"),
     el("ul", { class:"chlist" }, db.stories.map(s => {
@@ -337,20 +413,20 @@ function pWrite() {
         el("span", {}, el("a", { href:"#/story/" + s.id }, s.title), " ", el("span", { class:"small" }, pub ? "เผยแพร่แล้ว" : "ส่วนตัว")),
         el("span", { class:"row", style:"margin:0" },
           el("a", { class:"small", href:"#/edit/" + s.id }, "Edit"),
-          el("button", { class:pub ? "btn" : "btn primary", type:"button", onclick:() => {
-            s.published = !pub; edit();
-            flash = pub ? "\u201c" + s.title + "\u201d is private again. Visitors stop seeing it after you upload a new stories.json."
-                        : "\u201c" + s.title + "\u201d is marked เผยแพร่. Visitors will see it after you download stories.json below and upload it to GitHub.";
+          el("button", { class:pub ? "btn" : "btn primary", type:"button", onclick:async () => {
+            s.published = !pub;
+            if (!(await saveStory(s))) { s.published = pub; return; }
+            flash = pub ? "\u201c" + s.title + "\u201d is now hidden from visitors." : "\u201c" + s.title + "\u201d is now live for everyone.";
             route();
           } }, pub ? "ยกเลิกเผยแพร่" : "เผยแพร่")));
     })),
-    el("h2", {}, "Backup & publish"),
-    el("p", { class:"help" }, "Only stories marked เผยแพร่ go into stories.json, so private stories stay out of it. Upload stories.json to your GitHub repository (same folder as index.html), keeping that name, and Vercel updates the site in about a minute. The full backup also includes your private stories."),
+    old && old.length ? el("p", { class:"help" }, "Found " + old.length + " stories saved in this browser from before. ",
+      el("button", { class:"btn primary", type:"button", onclick:() => importList(old, "Moved " + old.length + " stories to your site.").then(() => localStorage.removeItem("marginalia_old")) }, "Move them to the site")) : "",
+    el("h2", {}, "Backup & import"),
     el("div", { class:"row" },
-      el("button", { class:"btn primary", type:"button", onclick:() => download("stories.json", db.stories.filter(s => s.published !== false)) }, "Download stories.json"),
       el("button", { class:"btn", type:"button", onclick:() => download("marginalia-backup.json", db.stories) }, "Download full backup"),
-      el("button", { class:"btn danger", type:"button", onclick:() => { if (confirm("Throw away everything saved in this browser, including private stories you have not published? Download a full backup first if you are unsure.")) { db.edited = false; db.stories = null; save(); location.reload(); } } }, "Discard my local changes")),
-    el("h2", {}, "Restore from a file"), file);
+      el("button", { class:"btn", type:"button", onclick:() => { pw = ""; localStorage.removeItem(PW_KEY); syncNav(); loadStories().then(() => go("#/")); } }, "Log out")),
+    el("h2", {}, "Import from a file (backup or old stories.json)"), file);
 }
 
 function pEdit(id) {
@@ -358,26 +434,27 @@ function pEdit(id) {
   const s = isNew ? { title:"", author:"", genre:GENRES[0], fandom:"", status:"Ongoing", summary:"", chapters:[], published:false } : getS(id);
   if (!s) return nf();
   title((isNew ? "New story" : "Edit story") + " – Marginalia");
+  const cv = { ...(s.cover || {}) };
   const F = { t:inp(s.title), a:inp(s.author), f:inp(s.fandom), g:sel(GENRES, s.genre), st:sel(["Ongoing", "Completed"], s.status), sum:area(s.summary, 4) };
-  const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:() => {
-    if (confirm("Delete this story and all its chapters?")) { db.stories = db.stories.filter(x => x.id !== id); edit(); go("#/write"); } } }, "Delete story") : "";
+  const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:async () => {
+    if (confirm("Delete this story and all its chapters?") && await removeStory(id)) go("#/write"); } }, "Delete story") : "";
   app.replaceChildren(el("h1", {}, isNew ? "New story" : "Edit story"),
-    field("Title", F.t), field("Author", F.a), field("Genre", F.g), field("Fandom (or write Original)", F.f), field("Status", F.st), field("Summary", F.sum),
+    field("Title", F.t), field("Author", F.a), field("Genre", F.g), field("Fandom (or write Original)", F.f), field("Status", F.st), field("Summary", F.sum), coverEditor(F.t, cv),
     isNew ? el("p", { class:"help" }, "New stories start as private (ส่วนตัว). When you are ready, go to Write and click เผยแพร่.") : "",
-    el("div", { class:"row" }, el("button", { class:"btn primary", type:"button", onclick:() => {
+    el("div", { class:"row" }, el("button", { class:"btn primary", type:"button", onclick:async () => {
       if (!F.t.value.trim()) { alert("Please add a title."); return; }
-      Object.assign(s, { title:F.t.value.trim(), author:F.a.value.trim() || "Anonymous", genre:F.g.value, fandom:F.f.value.trim(), status:F.st.value, summary:F.sum.value.trim(), updated:Date.now() });
+      Object.assign(s, { title:F.t.value.trim(), author:F.a.value.trim() || "Anonymous", genre:F.g.value, fandom:F.f.value.trim(), status:F.st.value, summary:F.sum.value.trim(), cover:Object.keys(cv).length ? cv : undefined, updated:Date.now() });
       if (isNew) { s.id = (s.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "story") + "-" + Date.now().toString(36); db.stories.unshift(s); }
-      edit(); go("#/story/" + s.id);
+      if (await saveStory(s)) go("#/story/" + s.id);
     } }, "Save story"), el("a", { class:"btn", href:isNew ? "#/write" : "#/story/" + id }, "Cancel"), del));
 }
 
 /* Shrinks an uploaded picture to 900px wide so it stays small */
-function shrink(file) {
+function shrink(file, max) {
   return new Promise((res, rej) => {
     const img = new Image(), url = URL.createObjectURL(file);
     img.onload = () => {
-      const k = Math.min(1, 900 / img.width), c = document.createElement("canvas");
+      const k = Math.min(1, (max || 900) / img.width), c = document.createElement("canvas");
       c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
       const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", 0.82));
@@ -418,16 +495,16 @@ function pChapter(id, n) {
   const drawNotes = () => nt.replaceChildren(...rows.map(r => noteRow(r, rows, drawNotes)),
     el("button", { class:"btn", type:"button", onclick:() => { rows.push({ key:"", title:"", text:"", image:"" }); drawNotes(); } }, "+ Add footnote"));
   drawNotes();
-  const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:() => {
-    if (confirm("Delete this chapter?")) { s.chapters.splice(i, 1); edit(); go("#/story/" + id); } } }, "Delete chapter") : "";
+  const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:async () => {
+    if (confirm("Delete this chapter?")) { s.chapters.splice(i, 1); if (await saveStory(s)) go("#/story/" + id); } } }, "Delete chapter") : "";
   app.replaceChildren(el("h1", {}, isNew ? "Add chapter" : "Edit chapter"), el("p", { class:"meta" }, s.title),
     field("Chapter title", t), field("Text (press Enter twice for a new paragraph)", x),
     el("p", { class:"help" }, "Footnotes: wrap a word like {{loose stone|stone}} in the text, then add a footnote below whose Key is stone (the word after the | symbol). Pictures you choose are shrunk automatically."),
     el("h2", {}, "Footnotes"), nt,
-    el("div", { class:"row" }, el("button", { class:"btn primary", type:"button", onclick:() => {
+    el("div", { class:"row" }, el("button", { class:"btn primary", type:"button", onclick:async () => {
       const ch = { title:t.value.trim() || "Untitled chapter", text:x.value, notes:collectNotes(rows) };
       if (isNew) s.chapters.push(ch); else s.chapters[i] = ch;
-      s.updated = Date.now(); edit(); go("#/story/" + id);
+      s.updated = Date.now(); if (await saveStory(s)) go("#/story/" + id);
     } }, "Save chapter"), el("a", { class:"btn", href:"#/story/" + id }, "Cancel"), del));
 }
 
@@ -436,6 +513,7 @@ function route() {
   if (!db.stories) return;
   const p = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
   const k = p[0] || "home";
+  if (!isAdmin() && (k === "edit" || k === "chapter")) { go("#/write"); return; }
   document.querySelectorAll("header nav a").forEach(a => a.setAttribute("aria-current", a.dataset.k === k || (a.dataset.k === "write" && (k === "edit" || k === "chapter")) ? "page" : "false"));
   window.scrollTo(0, 0);
   ({ home:pHome, browse:() => pBrowse(p[1], p[2]), story:() => pStory(p[1]), read:() => pRead(p[1], p[2]),
@@ -447,10 +525,10 @@ addEventListener("hashchange", route);
   document.querySelectorAll("header nav a").forEach(a => a.prepend(icon(a.dataset.k)));
   document.querySelector(".brand").prepend(icon("book"));
   applyTheme();
-  if (!db.edited || !db.stories) {
-    try { const r = await fetch("stories.json", { cache:"no-cache" }); const d = r.ok ? await r.json() : null; db.stories = (d && Array.isArray(d.stories) ? d.stories : SEED).filter(s => s.published !== false); }
-    catch (e) { db.stories = SEED; }
-  }
+  if (db.edited && db.stories && !localStorage.getItem("marginalia_old")) { try { localStorage.setItem("marginalia_old", JSON.stringify(db.stories)); } catch (e) {} }
+  db.edited = false; db.stories = null;
+  syncNav();
+  await loadStories();
   route();
 })();
 </script>
