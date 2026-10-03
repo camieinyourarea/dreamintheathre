@@ -90,6 +90,11 @@ h1{font-size:2.3rem}.hero h1{font-size:2.45rem}h2{font-size:1.5rem}
 header nav a,.btn,.chip{letter-spacing:.03em}
 .nbox{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:14px 16px;margin:0 0 14px}
 .nbox .inp{margin-bottom:10px}
+.text mark,.sum mark{background:#ffe28a;color:#3f3052;padding:0 .15em;border-radius:3px}
+.mid{text-align:center}.sep{text-align:center;color:var(--soft);letter-spacing:.35em}
+.sum p{margin:0 0 .8em}
+.tb{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}.tb .btn{padding:4px 12px;min-height:34px}
+.pv{border:2px dashed var(--line);border-radius:16px;padding:4px 16px;margin:0 0 14px}
 </style>
 </head>
 <body>
@@ -290,6 +295,59 @@ function textToNotes(t) {
   return n;
 }
 
+/* ---------- Text styling: **bold** *italic* __underline__ ~~strike~~ ==highlight== ---------- */
+const MARK = /\{\{(.+?)\|(.+?)\}\}|\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|__(.+?)__|~~(.+?)~~|==(.+?)==|\*(.+?)\*/g;
+const TAGS = [0, 0, 0, ["strong", "em"], ["strong"], ["u"], ["s"], ["mark"], ["em"]];
+function inline(t, notes) {
+  const out = [], re = new RegExp(MARK.source, "g"); let last = 0;
+  for (let m; (m = re.exec(t)); ) {
+    out.push(t.slice(last, m.index)); last = m.index + m[0].length;
+    if (m[1] !== undefined) {
+      const n = notes[m[2].trim()];
+      out.push(n ? el("button", { class:"fn", type:"button", "aria-haspopup":"dialog", onclick:() => openNote(n) }, m[1]) : m[1]);
+    } else {
+      let i = 3; while (m[i] === undefined) i++;
+      let node = inline(m[i], notes);
+      [...TAGS[i]].reverse().forEach(g => { node = el(g, {}, node); });
+      out.push(node);
+    }
+  }
+  out.push(t.slice(last)); return out;
+}
+function blocks(text, notes) {
+  return (text || "").split(/\n+/).map(l => l.trim()).filter(Boolean).map(l => {
+    if (/^-{3,}$/.test(l)) return el("p", { class:"sep", "aria-hidden":"true" }, "\u2726  \u2726  \u2726");
+    const mid = l.startsWith(">>");
+    return el("p", mid ? { class:"mid" } : {}, inline(mid ? l.slice(2).trim() : l, notes || {}));
+  });
+}
+function wrapSel(ta, a, b) {
+  const s = ta.selectionStart, e = ta.selectionEnd, t = ta.value.slice(s, e) || "text";
+  ta.setRangeText(a + t + b, s, e, "end"); ta.focus(); ta.setSelectionRange(s + a.length, s + a.length + t.length);
+}
+function rich(label, ta, getNotes, cls) {
+  const mk = (txt, title, fn) => el("button", { class:"btn", type:"button", title, "aria-label":title, onclick:fn }, txt);
+  const btns = [
+    mk(el("b", {}, "B"), "Bold (Ctrl+B)", () => wrapSel(ta, "**", "**")),
+    mk(el("i", {}, "I"), "Italic (Ctrl+I)", () => wrapSel(ta, "*", "*")),
+    mk(el("u", {}, "U"), "Underline (Ctrl+U)", () => wrapSel(ta, "__", "__")),
+    mk(el("s", {}, "S"), "Strikethrough", () => wrapSel(ta, "~~", "~~")),
+    mk("Highlight", "Highlight", () => wrapSel(ta, "==", "==")),
+    mk("Center", "Center this paragraph", () => { const ls = ta.value.lastIndexOf("\n", ta.selectionStart - 1) + 1; if (!ta.value.startsWith(">>", ls)) ta.setRangeText(">> ", ls, ls, "preserve"); ta.focus(); }),
+    mk("\u2726 Scene break", "Insert a scene break", () => { ta.setRangeText("\n\n---\n\n", ta.selectionStart, ta.selectionEnd, "end"); ta.focus(); })
+  ];
+  const pv = el("div", { class:cls + " pv" }); pv.hidden = true;
+  const prevBtn = mk("Preview", "Preview", () => {
+    const on = pv.hidden; pv.hidden = !on; ta.hidden = on; btns.forEach(b => { b.disabled = on; });
+    prevBtn.replaceChildren(on ? "Edit" : "Preview");
+    if (on) pv.replaceChildren(...blocks(ta.value, getNotes()));
+  });
+  const keys = { b:"**", i:"*", u:"__" };
+  ta.addEventListener("keydown", e => { const k = e.key.toLowerCase(); if ((e.ctrlKey || e.metaKey) && keys[k]) { e.preventDefault(); wrapSel(ta, keys[k], keys[k]); } });
+  return el("div", { class:"f" }, el("span", {}, label), el("div", { class:"tb" }, btns, prevBtn), ta, pv,
+    el("p", { class:"small", style:"margin:-8px 0 14px" }, "Select some text, then press a button. Every new line starts a new paragraph."));
+}
+
 /* ---------- Pages ---------- */
 const SHOP = '<svg class="shop" viewBox="0 0 220 170" aria-hidden="true"><path d="M186 16a15 15 0 1 0 8 27a12 12 0 1 1-8-27z" fill="#ffe28a"/><path d="M30 28l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#ffe28a"/><path d="M150 22l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#ffe28a"/><path d="M204 96l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#ffe28a"/><rect x="38" y="74" width="144" height="86" rx="10" fill="#fff4fa" stroke="#d9b8ee" stroke-width="3"/><path d="M30 76L44 48H176L190 76Z" fill="#f7b6d2"/><path d="M72 48h22l-3 28H69zM120 48h22l3 28h-22z" fill="#fff"/><path d="M30 76a11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0z" fill="#f7b6d2"/><rect x="48" y="100" width="30" height="34" rx="6" fill="#ffefb0"/><rect x="142" y="100" width="30" height="34" rx="6" fill="#ffefb0"/><path d="M63 100v34M48 117h30M157 100v34M142 117h30" stroke="#e7c76a" stroke-width="2"/><path d="M92 160v-38a18 18 0 0 1 36 0v38z" fill="#b99be8"/><circle cx="121" cy="141" r="2.5" fill="#ffe28a"/><rect x="20" y="160" width="180" height="6" rx="3" fill="#cdb4ee"/></svg>';
 function heroBox() {
@@ -329,7 +387,7 @@ function pStory(id) {
     el("div", { class:"detail" }, cover(s), el("div", {},
       el("h1", {}, s.title),
       el("p", { class:"meta" }, "by " + s.author + " · " + s.genre + (s.fandom ? " · " + s.fandom : "") + " · " + s.status + (s.published === false ? " · ส่วนตัว" : "")),
-      el("p", {}, s.summary),
+      el("div", { class:"sum" }, blocks(s.summary)),
       el("div", { class:"row" },
         s.chapters.length ? el("a", { class:"btn primary", href:"#/read/" + id + "/" + (at || 0) }, at ? "Continue chapter " + (at + 1) : "Start reading") : el("span", { class:"soft" }, "No chapters yet."),
         el("button", { class:"btn", type:"button", onclick:() => { db.lib = inLib ? db.lib.filter(x => x !== id) : [...db.lib, id]; save(); route(); } }, inLib ? "Remove from library" : "Add to library"),
@@ -358,7 +416,7 @@ function pRead(id, n) {
         el("button", { class:"btn", type:"button", "aria-label":"Smaller text", onclick:() => size(-1) }, "A−"),
         el("button", { class:"btn", type:"button", "aria-label":"Larger text", onclick:() => size(1) }, "A+"))),
     el("h1", { style:"margin-top:22px" }, c.title), el("p", { class:"meta" }, "by " + s.author),
-    el("article", { class:"text" }, c.text.split(/\n+/).filter(Boolean).map(p => el("p", {}, withNotes(p, c.notes || {})))),
+    el("article", { class:"text" }, blocks(c.text, c.notes)),
     el("div", { class:"nav" }, prev, jump, next),
     isAdmin() ? el("p", {}, el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit this chapter")) : "");
 }
@@ -439,7 +497,7 @@ function pEdit(id) {
   const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:async () => {
     if (confirm("Delete this story and all its chapters?") && await removeStory(id)) go("#/write"); } }, "Delete story") : "";
   app.replaceChildren(el("h1", {}, isNew ? "New story" : "Edit story"),
-    field("Title", F.t), field("Author", F.a), field("Genre", F.g), field("Fandom (or write Original)", F.f), field("Status", F.st), field("Summary", F.sum), coverEditor(F.t, cv),
+    field("Title", F.t), field("Author", F.a), field("Genre", F.g), field("Fandom (or write Original)", F.f), field("Status", F.st), rich("Summary", F.sum, () => ({}), "sum"), coverEditor(F.t, cv),
     isNew ? el("p", { class:"help" }, "New stories start as private (ส่วนตัว). When you are ready, go to Write and click เผยแพร่.") : "",
     el("div", { class:"row" }, el("button", { class:"btn primary", type:"button", onclick:async () => {
       if (!F.t.value.trim()) { alert("Please add a title."); return; }
@@ -498,7 +556,7 @@ function pChapter(id, n) {
   const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:async () => {
     if (confirm("Delete this chapter?")) { s.chapters.splice(i, 1); if (await saveStory(s)) go("#/story/" + id); } } }, "Delete chapter") : "";
   app.replaceChildren(el("h1", {}, isNew ? "Add chapter" : "Edit chapter"), el("p", { class:"meta" }, s.title),
-    field("Chapter title", t), field("Text (press Enter twice for a new paragraph)", x),
+    field("Chapter title", t), rich("Chapter text", x, () => collectNotes(rows), "text"),
     el("p", { class:"help" }, "Footnotes: wrap a word like {{loose stone|stone}} in the text, then add a footnote below whose Key is stone (the word after the | symbol). Pictures you choose are shrunk automatically."),
     el("h2", {}, "Footnotes"), nt,
     el("div", { class:"row" }, el("button", { class:"btn primary", type:"button", onclick:async () => {
