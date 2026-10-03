@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marginalia – read novels online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Jost:wght@400;500;600&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Bai+Jamjuree:wght@400;500;600;700&family=Sarabun:wght@400;600&family=Noto+Serif+Thai:wght@400;600&family=Trirong:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--read:"Bai Jamjuree",Literata,Georgia,serif;--bg:#f6f4fb;--card:#fff;--ink:#241b3a;--soft:#6b6485;--line:#ded9ec;--accent:#5b4bdb;--ai:#fff;--size:19px}
+:root[data-theme=dark]{--bg:#14121f;--card:#1d1a2e;--ink:#e8e3f5;--soft:#9d96b8;--line:#2e2a45;--accent:#9c8cff;--ai:#14121f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "DM Sans","Bai Jamjuree",system-ui,sans-serif}
+a{color:inherit}button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+header{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.bar{max-width:960px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{font:600 1.35rem Literata,"Bai Jamjuree",Georgia,serif;text-decoration:none;margin-right:auto}
+header nav{display:flex;gap:4px;flex-wrap:wrap}
+header nav a{padding:8px 12px;border-radius:8px;text-decoration:none}
+header nav a[aria-current=page]{background:var(--accent);color:var(--ai)}
+.wrap{max-width:960px;margin:0 auto;padding:26px 18px 80px}
+h1{font:600 2rem/1.2 Literata,"Bai Jamjuree",Georgia,serif;margin:0 0 10px}
+h2{font:600 1.3rem Literata,"Bai Jamjuree",Georgia,serif;margin:30px 0 12px}
+.soft,.meta{color:var(--soft)}.meta{margin:0 0 10px}
+.inp{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;background:var(--card);margin:0 0 14px}
+textarea.inp{font-family:var(--read);line-height:1.7;resize:vertical}
+.btn{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 15px;cursor:pointer;text-decoration:none;min-height:40px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--ai);border-color:var(--accent);font-weight:500}
+.btn.danger{color:#c0392b;border-color:#c0392b}
+.btn[disabled]{opacity:.4;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 20px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:5px 14px;text-decoration:none}
+.chip[aria-current=true]{background:var(--accent);color:var(--ai);border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:18px}
+.tile{text-decoration:none}
+.cover{aspect-ratio:2/3;border-radius:8px;padding:14px;display:flex;align-items:flex-end;color:#fff;font:600 1.05rem/1.25 Literata,"Bai Jamjuree",Georgia,serif;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.tile b{display:block;margin-top:8px;line-height:1.3}.tile .meta{font-size:.85rem}
+.detail{display:grid;grid-template-columns:170px 1fr;gap:24px;align-items:start}
+@media(max-width:560px){.detail{grid-template-columns:1fr}.cover{max-width:170px}}
+.chlist{list-style:none;padding:0;margin:0 0 18px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.chlist li{display:flex;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.chlist li:last-child{border:0}
+.small{font-size:.85rem;color:var(--soft)}
+.f{display:block}.f span{display:block;font-weight:500;margin-bottom:4px}
+.empty{color:var(--soft);padding:20px 0}
+.nav{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.text{font-family:var(--read);font-size:var(--size);line-height:1.9;max-width:34em;margin:26px 0}
+.text p{margin:0 0 1.1em}
+select{padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);max-width:100%}
+.fn{font:inherit;color:var(--accent);background:none;border:0;border-bottom:2px dotted var(--accent);padding:0;cursor:pointer}
+dialog.note{width:min(440px,92vw);border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:0;overflow:hidden}
+dialog.note::backdrop{background:rgba(10,8,20,.55)}
+.note img{display:block;width:100%;max-height:260px;object-fit:cover}
+.nb{padding:16px 18px 18px}.nb h3{font:600 1.15rem Literata,"Bai Jamjuree",Georgia,serif;margin:0 0 6px}.nb p{margin:0 0 14px}
+.help{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:.9rem;color:var(--soft);margin:0 0 14px}
+
+/* ---- Secret bookshop theme ---- */
+:root{--head:Trirong,"Bai Jamjuree",Georgia,serif;--bg:#fbf3fa;--card:#fffdfd;--ink:#3f3052;--soft:#85749b;--line:#ead9ee;--accent:#7b57c9;--ai:#fff;--star:#ecd2f3;--glow1:#ffe3f1;--glow2:#dff1ff;--a1:#f9bfd8;--a2:#d9cbf7;--h1:#ffe4f0;--h2:#e6defa;--chip:#fff0f7}
+:root[data-theme=dark]{--bg:#1a1630;--card:#251f43;--ink:#f3ebff;--soft:#b9acd9;--line:#3b3162;--accent:#c9b3ff;--ai:#1a1630;--star:#4a3f7a;--glow1:#33224d;--glow2:#1c2f52;--a1:#6b4a8f;--a2:#463a8a;--h1:#33264f;--h2:#2a2755;--chip:#2e2750}
+body{background:radial-gradient(circle at 10% 0,var(--glow1),transparent 35%),radial-gradient(circle at 95% 10%,var(--glow2),transparent 32%),var(--bg);background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.6;background:radial-gradient(var(--star) 1.4px,transparent 1.8px) 0 0/44px 44px,radial-gradient(var(--star) 1px,transparent 1.4px) 22px 22px/44px 44px}
+.brand,h1,h2,.cover,.nb h3{font-family:var(--head)}
+header{border-bottom:0;box-shadow:0 6px 18px -10px rgba(120,80,170,.35)}
+header::after{content:"";display:block;height:12px;background:radial-gradient(circle at 12px 0,var(--a1) 11.5px,transparent 12px) 0 0/48px 12px repeat-x,radial-gradient(circle at 12px 0,var(--a2) 11.5px,transparent 12px) 24px 0/48px 12px repeat-x}
+.ic{display:inline-flex;vertical-align:-.2em;margin-right:.35em}
+h2 .ic,.brand .ic{color:var(--accent)}
+.btn{border-radius:999px;border-width:2px}
+.btn.primary{box-shadow:0 3px 0 rgba(90,60,150,.28)}
+.inp{border-radius:16px;border-width:2px}
+select{border-radius:12px}
+.chip{background:var(--chip);border-width:2px}
+.hero{display:grid;grid-template-columns:1fr 200px;gap:12px;align-items:center;padding:24px 26px;margin-bottom:6px;border-radius:28px;border:2px solid var(--line);background:linear-gradient(135deg,var(--h1),var(--h2))}
+.hero h1{font-size:2.1rem}.hero p{margin:0 0 8px}
+.shop{width:100%;height:auto;max-width:200px;justify-self:center}
+@media(max-width:600px){.hero{grid-template-columns:1fr}.shop{max-width:150px}}
+.cover{color:#3f3052;border-radius:14px 18px 18px 14px;border-left:9px solid rgba(255,255,255,.6);position:relative;box-shadow:0 6px 14px -6px rgba(110,70,160,.45)}
+.cover::before{content:"\2726";position:absolute;top:10px;right:12px;opacity:.65}
+@media(prefers-reduced-motion:no-preference){.cover{transition:transform .2s}.tile:hover .cover{transform:rotate(-1.5deg) translateY(-3px)}}
+.chlist,.help,dialog.note{border-radius:18px;border-width:2px}
+
+/* ---- Quiet luxury type: English first, Thai falls back to Trirong / Bai Jamjuree ---- */
+:root{--head:"Cormorant Garamond",Trirong,"Bai Jamjuree",Georgia,serif;--read:"EB Garamond","Bai Jamjuree",Georgia,serif}
+body{font-family:Jost,"Bai Jamjuree",system-ui,sans-serif}
+.brand{font-size:1.65rem;font-weight:700;letter-spacing:.01em}
+h1{font-size:2.3rem}.hero h1{font-size:2.45rem}h2{font-size:1.5rem}
+.cover{font-size:1.25rem}.nb h3{font-size:1.3rem}
+header nav a,.btn,.chip{letter-spacing:.03em}
+.nbox{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:14px 16px;margin:0 0 14px}
+.nbox .inp{margin-bottom:10px}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <a class="brand" href="#/">Marginalia</a>
+  <nav aria-label="Main">
+    <a href="#/" data-k="home">Home</a><a href="#/browse/All" data-k="browse">Browse</a>
+    <a href="#/library" data-k="library">Library</a><a href="#/write" data-k="write">Write</a>
+  </nav>
+  <button class="btn" id="themeBtn" type="button">Dark mode</button>
+</div></header>
+<div class="wrap"><main id="app"></main></div>
+<dialog class="note" id="noteBox" aria-label="Footnote"></dialog>
+
+<script>
+const GENRES = ["Fantasy","Romance","Sci-Fi","Mystery","Horror","Adventure","Drama","Comedy","Slice of Life"];
+const FONTS = {
+  "EB Garamond": '"EB Garamond","Bai Jamjuree",Georgia,serif',
+  "Bai Jamjuree": '"Bai Jamjuree",Literata,Georgia,serif',
+  "Sarabun": 'Sarabun,Literata,Georgia,serif',
+  "Noto Serif Thai": '"Noto Serif Thai",Literata,Georgia,serif',
+  "Trirong": '"EB Garamond",Trirong,Georgia,serif',
+  "Literata": 'Literata,"Bai Jamjuree",Georgia,serif'
+};
+
+/* Starter stories. Once you publish your own stories.json file
+   (see the Write page), the site uses that instead. */
+const SEED = [
+  { id:"midnight-bookshop", title:"ร้านหนังสือเที่ยงคืน", author:"ตัวอย่าง", genre:"Slice of Life", fandom:"Original", status:"Ongoing", updated:4,
+    summary:"ร้านหนังสือเล็กๆ ที่เปิดเฉพาะหลังเที่ยงคืน และลูกค้าที่ไม่เคยมาซ้ำสองครั้ง",
+    chapters:[ { title:"ตอนที่ 1: ลูกค้าคนแรก", text:"ฝนตกหนักในคืนที่นิดาเปิดร้านหนังสือเป็นครั้งแรก เธอแขวนป้ายไฟเล็กๆ หน้าร้านไว้ แล้วนั่งรอใต้แสงสีเหลืองอ่อน\n\nเวลาเที่ยงคืนตรง กระดิ่งหน้าประตูก็ดังขึ้น ชายแก่ในเสื้อกันฝนสีเทาก้าวเข้ามา พร้อมกับ{{หนังสือเล่มเก่า|book}}ที่เขาถือไว้ใต้แขน",
+      notes:{ book:{ title:"หนังสือเล่มเก่า", text:"ปกหนังสือไม่มีชื่อ และกระดาษข้างในมีกลิ่นฝนเหมือนเพิ่งตากแห้ง" } } } ] },
+  { id:"lighthouse-letters", title:"The Lighthouse Letters", author:"Sample Author", genre:"Mystery", fandom:"Original", status:"Ongoing", updated:3,
+    summary:"A new lighthouse keeper finds letters addressed to someone who never arrived.",
+    chapters:[
+      { title:"Chapter 1: The Bundle", text:"The first night, Mara found the letters tucked behind a {{loose stone|stone}} in the stairwell. There were nine of them, tied with blue thread, each addressed to a name she did not know.\n\nShe told herself she would not read them. By midnight the wind had rattled the windows twice, the {{lamp|lamp}} turned its slow circle overhead, and the thread was already untied.",
+        notes:{ stone:{title:"The loose stone",text:"Third step from the bottom. It wobbles if you press the left corner."}, lamp:{title:"The lamp",text:"It turns once every twelve seconds. Mara has started counting without meaning to."} } },
+      { title:"Chapter 2: The Tenth Letter", text:"The ninth letter ended in the middle of a sentence. Mara turned it over, certain there was more, and found only a date: tomorrow's.\n\nShe waited for the morning boat with the letters in her coat pocket, and for the first time in years she wished someone would come.", notes:{} } ] },
+  { id:"orbit-of-two", title:"Orbit of Two", author:"Sample Author", genre:"Sci-Fi", fandom:"Original", status:"Completed", updated:2,
+    summary:"Two rival engineers share one broken space station and one working coffee machine.",
+    chapters:[
+      { title:"Chapter 1: Shared Resources", text:"Station Halcyon had one working coffee machine, and both Ines and Dov had claimed it first.\n\nThe schedule they agreed on lasted four hours. It was the longest they had agreed on anything.", notes:{} },
+      { title:"Chapter 2: Pressure Drop", text:"When the alarm sounded, neither of them reached for the coffee. Dov was already at the panel, Ines was already reading the numbers aloud, and for ten quiet minutes they worked like a single person.\n\nAfterward the machine was still warm, and they drank from the same pot.", notes:{} } ] },
+  { id:"dragons-apprentice", title:"The Dragon's Apprentice", author:"Sample Author", genre:"Fantasy", fandom:"Fantasy AU", status:"Ongoing", updated:1,
+    summary:"A baker's daughter is hired to keep a dragon's hoard organized. It is not a small job.",
+    chapters:[ { title:"Chapter 1: Inventory", text:"The dragon did not want an apprentice. She wanted someone who could count, and Tilda could count very well.\n\n\"Eleven thousand, two hundred and four spoons,\" Tilda announced on the first evening. The dragon looked, for the first time, a little embarrassed.", notes:{} } ] }
+];
+
+/* ---------- Saved data ---------- */
+let db = { stories:null, edited:false, lib:[], progress:{}, theme:null, size:19, font:"EB Garamond" };
+try { Object.assign(db, JSON.parse(localStorage.getItem("marginalia2") || "{}")); } catch (e) {}
+if (db.fv !== 2) { db.font = "EB Garamond"; db.fv = 2; }
+const save = () => { try { const o = {...db}; if (!db.edited) o.stories = null; localStorage.setItem("marginalia2", JSON.stringify(o)); } catch (e) { if (!save.warned) { save.warned = true; alert("Your browser storage is full, so recent changes may not be saved. Download a full backup in Write, and use fewer or smaller pictures."); } } };
+const edit = () => { db.edited = true; save(); };
+
+/* ---------- Helpers ---------- */
+const app = document.getElementById("app"), noteBox = document.getElementById("noteBox"), themeBtn = document.getElementById("themeBtn");
+const getS = id => db.stories.find(s => s.id === id);
+const shown = () => db.stories.filter(s => db.edited || s.published !== false);
+const go = h => { location.hash = h; };
+const title = t => { document.title = t; };
+function el(tag, props, ...kids) {
+  const n = document.createElement(tag);
+  Object.entries(props || {}).forEach(([k, v]) => {
+    if (k === "class") n.className = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+  });
+  kids.flat().forEach(k => { if (k || k === 0) n.append(k); });
+  return n;
+}
+const ICONS = {
+  home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  browse:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  library:'<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>',
+  write:'<path d="M4 20l1-4L16 5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14 7l3 3"/>',
+  book:'<path d="M12 6c-2-1.5-5-2-8-1.5V18c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V4.5C17 4 14 4.5 12 6z"/><path d="M12 6v13.5"/>',
+  sparkle:'<path d="M12 3c.6 4.5 2.5 6.4 7 7-4.5.6-6.4 2.5-7 7-.6-4.5-2.5-6.4-7-7 4.5-.6 6.4-2.5 7-7z"/>',
+  moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>'
+};
+function icon(n) {
+  const sp = document.createElement("span"); sp.className = "ic"; sp.setAttribute("aria-hidden", "true");
+  sp.innerHTML = '<svg viewBox="0 0 24 24" width="1.15em" height="1.15em" fill="' + (n === "sparkle" ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICONS[n] + '</svg>';
+  return sp;
+}
+const inp = v => { const i = el("input", { class:"inp" }); i.value = v || ""; return i; };
+const area = (v, rows) => { const t = el("textarea", { class:"inp", rows }); t.value = v || ""; return t; };
+const sel = (opts, v) => { const s = el("select", { class:"inp" }, opts.map(o => el("option", { value:o }, o))); s.value = v; return s; };
+const field = (label, input) => el("label", { class:"f" }, el("span", {}, label), input);
+const nf = () => app.replaceChildren(el("p", { class:"empty" }, "Nothing here."), el("a", { class:"btn", href:"#/" }, "Back to home"));
+
+function applyTheme() {
+  const dark = db.theme ? db.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  document.documentElement.style.setProperty("--size", db.size + "px");
+  document.documentElement.style.setProperty("--read", FONTS[db.font] || FONTS["EB Garamond"]);
+  themeBtn.replaceChildren(icon(dark ? "sun" : "moon"), dark ? "Day mode" : "Night mode");
+}
+themeBtn.addEventListener("click", () => { db.theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; save(); applyTheme(); });
+
+function cover(s) {
+  let h = 0; for (const c of s.title) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return el("div", { class:"cover", style:"background:linear-gradient(160deg,hsl(" + h + " 80% 84%),hsl(" + ((h + 50) % 360) + " 75% 74%))" }, el("span", {}, s.title));
+}
+function tile(s, ch) {
+  return el("a", { class:"tile", href: ch !== undefined ? "#/read/" + s.id + "/" + ch : "#/story/" + s.id },
+    cover(s), el("b", {}, s.title), el("span", { class:"meta" }, s.genre + " · " + s.chapters.length + " ch." + (s.published === false ? " · ส่วนตัว" : "")));
+}
+const grid = items => el("div", { class:"grid" }, items);
+const section = (t, body) => el("section", {}, el("h2", {}, icon("sparkle"), t), body);
+function genreChips(cur) {
+  return el("nav", { class:"chips", "aria-label":"Genres" }, ["All", ...GENRES].map(g =>
+    el("a", { class:"chip", href:"#/browse/" + encodeURIComponent(g), "aria-current": g === cur ? "true" : "false" }, g)));
+}
+
+/* ---------- Footnotes ---------- */
+function openNote(n) {
+  noteBox.replaceChildren(n.image ? el("img", { src:n.image, alt:n.title || "" }) : "",
+    el("div", { class:"nb" }, el("h3", {}, n.title || ""), el("p", {}, n.text || ""),
+      el("button", { class:"btn primary", type:"button", onclick:() => noteBox.close() }, "Close")));
+  noteBox.showModal();
+}
+noteBox.addEventListener("click", e => { if (e.target === noteBox) noteBox.close(); });
+function withNotes(text, notes) {
+  const out = []; let last = 0;
+  text.replace(/\{\{(.+?)\|(.+?)\}\}/g, (m, word, key, at) => {
+    out.push(text.slice(last, at));
+    const note = notes[key.trim()];
+    out.push(note ? el("button", { class:"fn", type:"button", "aria-haspopup":"dialog", onclick:() => openNote(note) }, word) : word);
+    last = at + m.length; return m;
+  });
+  out.push(text.slice(last)); return out;
+}
+const notesToText = n => Object.entries(n || {}).map(([k, v]) => [k, v.title || "", v.text || "", v.image || ""].join(" | ")).join("\n");
+function textToNotes(t) {
+  const n = {};
+  t.split("\n").forEach(l => { const p = l.split("|").map(x => x.trim()); if (p[0]) n[p[0]] = { title:p[1] || "", text:p[2] || "", image:p[3] || "" }; });
+  return n;
+}
+
+/* ---------- Pages ---------- */
+const SHOP = '<svg class="shop" viewBox="0 0 220 170" aria-hidden="true"><path d="M186 16a15 15 0 1 0 8 27a12 12 0 1 1-8-27z" fill="#ffe28a"/><path d="M30 28l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#ffe28a"/><path d="M150 22l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#ffe28a"/><path d="M204 96l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#ffe28a"/><rect x="38" y="74" width="144" height="86" rx="10" fill="#fff4fa" stroke="#d9b8ee" stroke-width="3"/><path d="M30 76L44 48H176L190 76Z" fill="#f7b6d2"/><path d="M72 48h22l-3 28H69zM120 48h22l3 28h-22z" fill="#fff"/><path d="M30 76a11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0z" fill="#f7b6d2"/><rect x="48" y="100" width="30" height="34" rx="6" fill="#ffefb0"/><rect x="142" y="100" width="30" height="34" rx="6" fill="#ffefb0"/><path d="M63 100v34M48 117h30M157 100v34M142 117h30" stroke="#e7c76a" stroke-width="2"/><path d="M92 160v-38a18 18 0 0 1 36 0v38z" fill="#b99be8"/><circle cx="121" cy="141" r="2.5" fill="#ffe28a"/><rect x="20" y="160" width="180" height="6" rx="3" fill="#cdb4ee"/></svg>';
+function heroBox() {
+  const d = document.createElement("section"); d.className = "hero";
+  d.innerHTML = '<div><h1>Step into the secret bookshop</h1><p>เปิดประตู หยิบนิยายสักเล่ม แล้วอยู่อ่านด้วยกัน</p><p class="soft">Browse by genre, save favourites to your library, and pick up where you left off.</p></div>' + SHOP;
+  return d;
+}
+function pHome() {
+  title("Marginalia – read novels online");
+  const search = el("input", { class:"inp", type:"search", placeholder:"Search stories, authors, fandoms", "aria-label":"Search",
+    onkeydown:e => { if (e.key === "Enter") go("#/browse/All/" + encodeURIComponent(e.target.value)); } });
+  const cont = Object.keys(db.progress).map(getS).filter(Boolean);
+  app.replaceChildren(
+    heroBox(),
+    search, genreChips("All"),
+    cont.length ? section("Continue reading", grid(cont.map(s => tile(s, db.progress[s.id])))) : "",
+    section("Latest updates", grid([...shown()].sort((a, b) => (b.updated || 0) - (a.updated || 0)).map(s => tile(s)))));
+}
+
+function pBrowse(g, q) {
+  g = g || "All"; q = q || ""; title(g + " – Marginalia");
+  const list = el("div");
+  const draw = () => {
+    const k = q.toLowerCase();
+    const f = shown().filter(s => (g === "All" || s.genre === g) && [s.title, s.author, s.fandom, s.summary].join(" ").toLowerCase().includes(k));
+    list.replaceChildren(f.length ? grid(f.map(s => tile(s))) : el("p", { class:"empty" }, "No stories found here yet."));
+  };
+  const box = inp(q); box.type = "search"; box.placeholder = "Search in " + (g === "All" ? "all stories" : g); box.addEventListener("input", e => { q = e.target.value; draw(); });
+  app.replaceChildren(el("h1", {}, g === "All" ? "All stories" : g), genreChips(g), box, list); draw();
+}
+
+function pStory(id) {
+  const s = getS(id); if (!s) return nf();
+  title(s.title + " – Marginalia");
+  const at = db.progress[id], inLib = db.lib.includes(id);
+  app.replaceChildren(
+    el("div", { class:"detail" }, cover(s), el("div", {},
+      el("h1", {}, s.title),
+      el("p", { class:"meta" }, "by " + s.author + " · " + s.genre + (s.fandom ? " · " + s.fandom : "") + " · " + s.status + (s.published === false ? " · ส่วนตัว" : "")),
+      el("p", {}, s.summary),
+      el("div", { class:"row" },
+        s.chapters.length ? el("a", { class:"btn primary", href:"#/read/" + id + "/" + (at || 0) }, at ? "Continue chapter " + (at + 1) : "Start reading") : el("span", { class:"soft" }, "No chapters yet."),
+        el("button", { class:"btn", type:"button", onclick:() => { db.lib = inLib ? db.lib.filter(x => x !== id) : [...db.lib, id]; save(); route(); } }, inLib ? "Remove from library" : "Add to library"),
+        el("a", { class:"btn", href:"#/edit/" + id }, "Edit story")))),
+    el("h2", {}, "Chapters (" + s.chapters.length + ")"),
+    el("ul", { class:"chlist" }, s.chapters.map((c, i) => el("li", {}, el("a", { href:"#/read/" + id + "/" + i }, c.title), el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit")))),
+    el("a", { class:"btn primary", href:"#/chapter/" + id + "/new" }, "+ Add chapter"));
+}
+
+function pRead(id, n) {
+  const s = getS(id); if (!s || !s.chapters.length) return nf();
+  const i = Math.max(0, Math.min(s.chapters.length - 1, +n || 0)), c = s.chapters[i];
+  db.progress[id] = i; save(); title(c.title + " – " + s.title);
+  const to = k => go("#/read/" + id + "/" + k);
+  const jump = el("select", { "aria-label":"Jump to chapter", onchange:e => to(+e.target.value) },
+    s.chapters.map((x, k) => { const o = el("option", { value:k }, x.title); if (k === i) o.selected = true; return o; }));
+  const prev = el("button", { class:"btn", type:"button", onclick:() => to(i - 1) }, "Previous");
+  const next = el("button", { class:"btn primary", type:"button", onclick:() => to(i + 1) }, "Next chapter");
+  prev.disabled = i === 0; next.disabled = i === s.chapters.length - 1;
+  const fontPick = el("select", { "aria-label":"Reading font", onchange:e => { db.font = e.target.value; save(); applyTheme(); } },
+    Object.keys(FONTS).map(f => { const o = el("option", { value:f }, f); if (f === db.font) o.selected = true; return o; }));
+  const size = d => { db.size = Math.max(15, Math.min(28, db.size + d)); save(); applyTheme(); };
+  app.replaceChildren(
+    el("div", { class:"nav" }, el("a", { href:"#/story/" + id }, "← " + s.title),
+      el("div", { class:"row", style:"margin:0" }, fontPick,
+        el("button", { class:"btn", type:"button", "aria-label":"Smaller text", onclick:() => size(-1) }, "A−"),
+        el("button", { class:"btn", type:"button", "aria-label":"Larger text", onclick:() => size(1) }, "A+"))),
+    el("h1", { style:"margin-top:22px" }, c.title), el("p", { class:"meta" }, "by " + s.author),
+    el("article", { class:"text" }, c.text.split(/\n+/).filter(Boolean).map(p => el("p", {}, withNotes(p, c.notes || {})))),
+    el("div", { class:"nav" }, prev, jump, next),
+    el("p", {}, el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit this chapter")));
+}
+
+function pLibrary() {
+  title("Library – Marginalia");
+  const mine = db.lib.map(getS).filter(Boolean);
+  app.replaceChildren(el("h1", {}, "Your library"),
+    mine.length ? grid(mine.map(s => tile(s, db.progress[s.id]))) : el("p", { class:"empty" }, "Nothing saved yet. Open a story and choose Add to library."));
+}
+
+let flash = "";
+function download(name, list) {
+  const b = new Blob([JSON.stringify({ stories:list }, null, 1)], { type:"application/json" });
+  el("a", { href:URL.createObjectURL(b), download:name }).click();
+}
+function pWrite() {
+  const note = flash; flash = "";
+  title("Write – Marginalia");
+  const file = el("input", { type:"file", accept:"application/json", "aria-label":"Choose a backup file", onchange:async e => {
+    try {
+      const d = JSON.parse(await e.target.files[0].text());
+      if (!Array.isArray(d.stories)) throw 0;
+      if (!confirm("Replace the stories in this browser with the ones in this file?")) return;
+      db.stories = d.stories.map(s => ({ ...s, chapters:s.chapters || [] })); edit(); route();
+    } catch (x) { alert("That file is not a valid stories.json."); }
+  } });
+  app.replaceChildren(
+    el("h1", {}, "Write"),
+    note ? el("p", { class:"help", role:"status" }, note) : "",
+    el("p", { class:"soft" }, "Add and edit stories here. Your changes are saved in this browser only, until you publish them (see Backup & publish below)."),
+    el("div", { class:"row" }, el("a", { class:"btn primary", href:"#/edit/new" }, "+ New story")),
+    el("h2", {}, "Your stories"),
+    el("ul", { class:"chlist" }, db.stories.map(s => {
+      const pub = s.published !== false;
+      return el("li", {},
+        el("span", {}, el("a", { href:"#/story/" + s.id }, s.title), " ", el("span", { class:"small" }, pub ? "เผยแพร่แล้ว" : "ส่วนตัว")),
+        el("span", { class:"row", style:"margin:0" },
+          el("a", { class:"small", href:"#/edit/" + s.id }, "Edit"),
+          el("button", { class:pub ? "btn" : "btn primary", type:"button", onclick:() => {
+            s.published = !pub; edit();
+            flash = pub ? "\u201c" + s.title + "\u201d is private again. Visitors stop seeing it after you upload a new stories.json."
+                        : "\u201c" + s.title + "\u201d is marked เผยแพร่. Visitors will see it after you download stories.json below and upload it to GitHub.";
+            route();
+          } }, pub ? "ยกเลิกเผยแพร่" : "เผยแพร่")));
+    })),
+    el("h2", {}, "Backup & publish"),
+    el("p", { class:"help" }, "Only stories marked เผยแพร่ go into stories.json, so private stories stay out of it. Upload stories.json to your GitHub repository (same folder as index.html), keeping that name, and Vercel updates the site in about a minute. The full backup also includes your private stories."),
+    el("div", { class:"row" },
+      el("button", { class:"btn primary", type:"button", onclick:() => download("stories.json", db.stories.filter(s => s.published !== false)) }, "Download stories.json"),
+      el("button", { class:"btn", type:"button", onclick:() => download("marginalia-backup.json", db.stories) }, "Download full backup"),
+      el("button", { class:"btn danger", type:"button", onclick:() => { if (confirm("Throw away everything saved in this browser, including private stories you have not published? Download a full backup first if you are unsure.")) { db.edited = false; db.stories = null; save(); location.reload(); } } }, "Discard my local changes")),
+    el("h2", {}, "Restore from a file"), file);
+}
+
+function pEdit(id) {
+  const isNew = id === "new";
+  const s = isNew ? { title:"", author:"", genre:GENRES[0], fandom:"", status:"Ongoing", summary:"", chapters:[], published:false } : getS(id);
+  if (!s) return nf();
+  title((isNew ? "New story" : "Edit story") + " – Marginalia");
+  const F = { t:inp(s.title), a:inp(s.author), f:inp(s.fandom), g:sel(GENRES, s.genre), st:sel(["Ongoing", "Completed"], s.status), sum:area(s.summary, 4) };
+  const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:() => {
+    if (confirm("Delete this story and all its chapters?")) { db.stories = db.stories.filter(x => x.id !== id); edit(); go("#/write"); } } }, "Delete story") : "";
+  app.replaceChildren(el("h1", {}, isNew ? "New story" : "Edit story"),
+    field("Title", F.t), field("Author", F.a), field("Genre", F.g), field("Fandom (or write Original)", F.f), field("Status", F.st), field("Summary", F.sum),
+    isNew ? el("p", { class:"help" }, "New stories start as private (ส่วนตัว). When you are ready, go to Write and click เผยแพร่.") : "",
+    el("div", { class:"row" }, el("button", { class:"btn primary", type:"button", onclick:() => {
+      if (!F.t.value.trim()) { alert("Please add a title."); return; }
+      Object.assign(s, { title:F.t.value.trim(), author:F.a.value.trim() || "Anonymous", genre:F.g.value, fandom:F.f.value.trim(), status:F.st.value, summary:F.sum.value.trim(), updated:Date.now() });
+      if (isNew) { s.id = (s.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "story") + "-" + Date.now().toString(36); db.stories.unshift(s); }
+      edit(); go("#/story/" + s.id);
+    } }, "Save story"), el("a", { class:"btn", href:isNew ? "#/write" : "#/story/" + id }, "Cancel"), del));
+}
+
+/* Shrinks an uploaded picture to 900px wide so it stays small */
+function shrink(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, 900 / img.width), c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+function noteRow(r, rows, redraw) {
+  const bind = (e, k, ph) => { e.placeholder = ph; e.addEventListener("input", () => { r[k] = e.value; }); return e; };
+  const pick = el("input", { type:"file", accept:"image/*", "aria-label":"Upload a picture", onchange:async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { r.image = await shrink(f); redraw(); } catch (x) { alert("Could not read that picture. Please try a JPG or PNG."); }
+  } });
+  return el("div", { class:"nbox" },
+    field("Key (the same word that comes after | in your text)", bind(inp(r.key), "key", "stone")),
+    field("Title", bind(inp(r.title), "title", "The loose stone")),
+    field("Text", bind(area(r.text, 3), "text", "Third step from the bottom.")),
+    el("div", { class:"f" }, el("span", {}, "Picture (optional): choose a photo from your device"), pick),
+    r.image ? el("img", { src:r.image, alt:"", style:"max-width:220px;border-radius:12px;display:block;margin:10px 0" }) : "",
+    field("Or a picture file name / web address", bind(inp(r.image.startsWith("data:") ? "" : r.image), "image", "images/stone.jpg")),
+    el("div", { class:"row", style:"margin:0" },
+      r.image ? el("button", { class:"btn", type:"button", onclick:() => { r.image = ""; redraw(); } }, "Remove picture") : "",
+      el("button", { class:"btn danger", type:"button", onclick:() => { rows.splice(rows.indexOf(r), 1); redraw(); } }, "Delete footnote")));
+}
+function collectNotes(rows) {
+  const n = {};
+  rows.forEach(r => { const k = r.key.trim(); if (k) n[k] = { title:r.title, text:r.text, image:r.image }; });
+  return n;
+}
+function pChapter(id, n) {
+  const s = getS(id); if (!s) return nf();
+  const isNew = n === "new", i = isNew ? s.chapters.length : +n;
+  const c = isNew ? { title:"Chapter " + (i + 1), text:"", notes:{} } : s.chapters[i]; if (!c) return nf();
+  title("Edit chapter – " + s.title);
+  const t = inp(c.title), x = area(c.text, 14);
+  const rows = Object.entries(c.notes || {}).map(([k, v]) => ({ key:k, title:v.title || "", text:v.text || "", image:v.image || "" }));
+  const nt = el("div");
+  const drawNotes = () => nt.replaceChildren(...rows.map(r => noteRow(r, rows, drawNotes)),
+    el("button", { class:"btn", type:"button", onclick:() => { rows.push({ key:"", title:"", text:"", image:"" }); drawNotes(); } }, "+ Add footnote"));
+  drawNotes();
+  const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:() => {
+    if (confirm("Delete this chapter?")) { s.chapters.splice(i, 1); edit(); go("#/story/" + id); } } }, "Delete chapter") : "";
+  app.replaceChildren(el("h1", {}, isNew ? "Add chapter" : "Edit chapter"), el("p", { class:"meta" }, s.title),
+    field("Chapter title", t), field("Text (press Enter twice for a new paragraph)", x),
+    el("p", { class:"help" }, "Footnotes: wrap a word like {{loose stone|stone}} in the text, then add a footnote below whose Key is stone (the word after the | symbol). Pictures you choose are shrunk automatically."),
+    el("h2", {}, "Footnotes"), nt,
+    el("div", { class:"row" }, el("button", { class:"btn primary", type:"button", onclick:() => {
+      const ch = { title:t.value.trim() || "Untitled chapter", text:x.value, notes:collectNotes(rows) };
+      if (isNew) s.chapters.push(ch); else s.chapters[i] = ch;
+      s.updated = Date.now(); edit(); go("#/story/" + id);
+    } }, "Save chapter"), el("a", { class:"btn", href:"#/story/" + id }, "Cancel"), del));
+}
+
+/* ---------- Router ---------- */
+function route() {
+  if (!db.stories) return;
+  const p = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
+  const k = p[0] || "home";
+  document.querySelectorAll("header nav a").forEach(a => a.setAttribute("aria-current", a.dataset.k === k || (a.dataset.k === "write" && (k === "edit" || k === "chapter")) ? "page" : "false"));
+  window.scrollTo(0, 0);
+  ({ home:pHome, browse:() => pBrowse(p[1], p[2]), story:() => pStory(p[1]), read:() => pRead(p[1], p[2]),
+     library:pLibrary, write:pWrite, edit:() => pEdit(p[1]), chapter:() => pChapter(p[1], p[2]) }[k] || pHome)();
+}
+addEventListener("hashchange", route);
+
+(async () => {
+  document.querySelectorAll("header nav a").forEach(a => a.prepend(icon(a.dataset.k)));
+  document.querySelector(".brand").prepend(icon("book"));
+  applyTheme();
+  if (!db.edited || !db.stories) {
+    try { const r = await fetch("stories.json", { cache:"no-cache" }); const d = r.ok ? await r.json() : null; db.stories = (d && Array.isArray(d.stories) ? d.stories : SEED).filter(s => s.published !== false); }
+    catch (e) { db.stories = SEED; }
+  }
+  route();
+})();
+</script>
+</body>
+</html>
