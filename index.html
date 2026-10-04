@@ -507,7 +507,7 @@ function pRead(id, n) {
 }
 
 function pLibrary() {
-  title("Library – ImgnThtr");
+  title("Library – Imaginarium Theatre");
   const mine = db.lib.map(getS).filter(Boolean);
   app.replaceChildren(el("h1", {}, "Your library"),
     mine.length ? grid(mine.map(s => tile(s, db.progress[s.id]))) : el("p", { class:"empty" }, "Nothing saved yet. Open a story and choose Add to library."));
@@ -519,7 +519,7 @@ function download(name, list) {
   el("a", { href:URL.createObjectURL(b), download:name }).click();
 }
 function pLogin() {
-  title("Author login – ImgnThtr");
+  title("Author login – Imaginarium Theatre");
   const p = inp(""); p.type = "password"; p.autocomplete = "current-password";
   const submit = async () => {
     if (!p.value) return;
@@ -576,7 +576,7 @@ function pEdit(id) {
   const isNew = id === "new";
   const s = isNew ? { title:"", author:"", genre:GENRES[0], fandom:"", status:"Ongoing", summary:"", chapters:[], published:false } : getS(id);
   if (!s) return nf();
-  title((isNew ? "New story" : "Edit story") + " – ImgnThtr");
+  title((isNew ? "New story" : "Edit story") + " – Imaginarium Theatre");
   const cv = { ...(s.cover || {}) };
   const F = { t:inp(s.title), a:inp(s.author), f:inp(s.fandom), g:sel(GENRES, s.genre), st:sel(["Ongoing", "Completed"], s.status), sum:area(s.summary, 4) };
   const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:async () => {
