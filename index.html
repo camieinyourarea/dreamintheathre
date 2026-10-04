@@ -6,6 +6,8 @@
 <title>Marginalia – read novels online</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Jost:wght@400;500;600&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Bai+Jamjuree:wght@400;500;600;700&family=Sarabun:wght@400;600&family=Noto+Serif+Thai:wght@400;600&family=Trirong:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Pacifico&family=Mali:wght@500;700&family=Pridi:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600&family=IBM+Plex+Sans+Thai:wght@400;600&family=Anuphan:wght@400;600&family=Prompt:wght@400;600&family=Kanit:wght@400;500&family=Niramit:wght@400;600&family=K2D:wght@400;600&family=Krub:wght@400;600&family=Athiti:wght@400;600&family=Mitr:wght@400;500&family=Taviraj:wght@400;600&family=Maitree:wght@400;600&family=Itim&family=Charmonman:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex&display=swap" rel="stylesheet">
 <style>
 :root{--read:"Bai Jamjuree",Literata,Georgia,serif;--bg:#f6f4fb;--card:#fff;--ink:#241b3a;--soft:#6b6485;--line:#ded9ec;--accent:#5b4bdb;--ai:#fff;--size:19px}
 :root[data-theme=dark]{--bg:#14121f;--card:#1d1a2e;--ink:#e8e3f5;--soft:#9d96b8;--line:#2e2a45;--accent:#9c8cff;--ai:#14121f}
@@ -95,6 +97,11 @@ header nav a,.btn,.chip{letter-spacing:.03em}
 .sum p{margin:0 0 .8em}
 .tb{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}.tb .btn{padding:4px 12px;min-height:34px}
 .pv{border:2px dashed var(--line);border-radius:16px;padding:4px 16px;margin:0 0 14px}
+.rate{display:flex;align-items:center;gap:2px;margin:0 0 14px;flex-wrap:wrap}
+.star{background:none;border:0;font-size:1.7rem;line-height:1;color:var(--line);cursor:pointer;padding:2px 4px}.star.on{color:#f5b301}
+.rate .small{margin-left:8px}
+.social{margin-top:40px;border-top:1px solid var(--line);padding-top:8px}
+.cmt{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:10px 16px;margin:12px 0}.cmt p{margin:6px 0 0;white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -120,6 +127,9 @@ const FONTS = {
   "Trirong": '"EB Garamond",Trirong,Georgia,serif',
   "Literata": 'Literata,"Bai Jamjuree",Georgia,serif'
 };
+["Noto Sans Thai","IBM Plex Sans Thai","Anuphan","Prompt","Kanit","Niramit","K2D","Krub","Athiti","Mitr"].forEach(f => { FONTS[f] = '"' + f + '","Noto Sans Thai",sans-serif'; });
+["Taviraj","Maitree","Pridi","Mali","Itim","Charmonman"].forEach(f => { FONTS[f] = '"' + f + '","Bai Jamjuree",Georgia,serif'; });
+FONTS["Google Sans Flex"] = '"Google Sans Flex","Noto Sans Thai",sans-serif'; // Latin letters only; Thai text uses Noto Sans Thai
 
 /* Starter stories. Once you publish your own stories.json file
    (see the Write page), the site uses that instead. */
@@ -148,6 +158,7 @@ const SEED = [
 let db = { stories:null, edited:false, lib:[], progress:{}, theme:null, size:19, font:"EB Garamond" };
 try { Object.assign(db, JSON.parse(localStorage.getItem("marginalia2") || "{}")); } catch (e) {}
 if (db.fv !== 2) { db.font = "EB Garamond"; db.fv = 2; }
+db.scroll = db.scroll || {};
 const save = () => { try { const o = {...db}; o.stories = null; delete o.edited; localStorage.setItem("marginalia2", JSON.stringify(o)); } catch (e) { if (!save.warned) { save.warned = true; alert("Your browser storage is full, so recent changes may not be saved. Download a full backup in Write, and use fewer or smaller pictures."); } } };
 const PW_KEY = "marginalia_admin";
 let pw = localStorage.getItem(PW_KEY) || "", ready = false;
@@ -348,6 +359,48 @@ function rich(label, ta, getNotes, cls) {
     el("p", { class:"small", style:"margin:-8px 0 14px" }, "Select some text, then press a button. Every new line starts a new paragraph."));
 }
 
+/* ---------- Ratings, comments, bookmark ---------- */
+const vid = localStorage.getItem("marginalia_vid") || (() => { const v = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); localStorage.setItem("marginalia_vid", v); return v; })();
+async function jf(url, body, headers) {
+  const r = await fetch(url, body ? { method:"POST", headers:{ "Content-Type":"application/json", ...(headers || {}) }, body:JSON.stringify(body) } : undefined);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || "Something went wrong (" + r.status + ")");
+  return d;
+}
+function ratingBox(id) {
+  const box = el("div", { class:"rate" });
+  const draw = d => {
+    const on = d.mine || Math.round(d.avg);
+    box.replaceChildren(...[1, 2, 3, 4, 5].map(n => el("button", { class:"star" + (n <= on ? " on" : ""), type:"button", "aria-label":"Rate " + n + " out of 5", onclick:async () => { try { draw(await jf("/api/ratings", { story:id, vid, score:n })); } catch (e) { alert(e.message); } } }, "\u2605")),
+      el("span", { class:"small" }, d.count ? d.avg.toFixed(1) + " (" + d.count + (d.count === 1 ? " rating" : " ratings") + ")" + (d.mine ? " \u00b7 yours: " + d.mine : "") : "Be the first to rate"));
+  };
+  jf("/api/ratings?story=" + encodeURIComponent(id) + "&vid=" + vid).then(draw).catch(() => box.replaceChildren(el("span", { class:"small" }, "Ratings are not available yet.")));
+  return box;
+}
+function commentsBox(s, chNum) {
+  const list = el("div", {}), nameI = inp(localStorage.getItem("marginalia_name") || ""), msg = area("", 3);
+  nameI.maxLength = 40; nameI.placeholder = "Your name (optional)"; msg.maxLength = 1000; msg.placeholder = "Tell the author how this story made you feel\u2026";
+  const draw = d => list.replaceChildren(...(d.comments.length ? d.comments.map(c => el("div", { class:"cmt" },
+    el("b", {}, c.name), el("span", { class:"small" }, " \u00b7 " + (c.ch ? "Ch. " + c.ch + " \u00b7 " : "") + new Date(c.ts).toLocaleDateString()),
+    isAdmin() ? el("button", { class:"small", type:"button", style:"float:right", onclick:async () => { if (!confirm("Delete this comment?")) return; try { draw(await jf("/api/comments", { story:s.id, delete:c.id }, { "x-admin-password":pw })); } catch (e) { alert(e.message); } } }, "Delete") : "",
+    el("p", {}, c.text))) : [el("p", { class:"soft" }, "No comments yet. Be the first!")]));
+  const post = el("button", { class:"btn primary", type:"button", onclick:async () => {
+    if (!msg.value.trim()) return;
+    try { localStorage.setItem("marginalia_name", nameI.value.trim()); draw(await jf("/api/comments", { story:s.id, name:nameI.value, text:msg.value, ch:chNum })); msg.value = ""; } catch (e) { alert(e.message); }
+  } }, "Post comment");
+  jf("/api/comments?story=" + encodeURIComponent(s.id)).then(draw).catch(() => list.replaceChildren(el("p", { class:"soft" }, "Comments are not available yet.")));
+  return el("section", { class:"social" }, el("h2", {}, "Comments"), field("Name", nameI), field("Comment", msg), post, list);
+}
+let scrollTimer;
+window.addEventListener("scroll", () => {
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    const m = location.hash.match(/^#\/read\/([^/]+)\/(\d+)/), a = document.querySelector("article.text");
+    if (!m || !a) return;
+    db.scroll[m[1]] = { ch:+m[2], y:+Math.max(0, Math.min(1, -a.getBoundingClientRect().top / a.offsetHeight)).toFixed(3) }; save();
+  }, 400);
+}, { passive:true });
+
 /* ---------- Pages ---------- */
 const SHOP = '<svg class="shop" viewBox="0 0 220 170" aria-hidden="true"><path d="M186 16a15 15 0 1 0 8 27a12 12 0 1 1-8-27z" fill="#ffe28a"/><path d="M30 28l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#ffe28a"/><path d="M150 22l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#ffe28a"/><path d="M204 96l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#ffe28a"/><rect x="38" y="74" width="144" height="86" rx="10" fill="#fff4fa" stroke="#d9b8ee" stroke-width="3"/><path d="M30 76L44 48H176L190 76Z" fill="#f7b6d2"/><path d="M72 48h22l-3 28H69zM120 48h22l3 28h-22z" fill="#fff"/><path d="M30 76a11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0z" fill="#f7b6d2"/><rect x="48" y="100" width="30" height="34" rx="6" fill="#ffefb0"/><rect x="142" y="100" width="30" height="34" rx="6" fill="#ffefb0"/><path d="M63 100v34M48 117h30M157 100v34M142 117h30" stroke="#e7c76a" stroke-width="2"/><path d="M92 160v-38a18 18 0 0 1 36 0v38z" fill="#b99be8"/><circle cx="121" cy="141" r="2.5" fill="#ffe28a"/><rect x="20" y="160" width="180" height="6" rx="3" fill="#cdb4ee"/></svg>';
 function heroBox() {
@@ -382,26 +435,27 @@ function pBrowse(g, q) {
 function pStory(id) {
   const s = getS(id); if (!s) return nf();
   title(s.title + " – Marginalia");
-  const at = db.progress[id], inLib = db.lib.includes(id);
+  const at = db.progress[id], has = at !== undefined, sp = db.scroll[id], inLib = db.lib.includes(id);
   app.replaceChildren(
     el("div", { class:"detail" }, cover(s), el("div", {},
       el("h1", {}, s.title),
       el("p", { class:"meta" }, "by " + s.author + " · " + s.genre + (s.fandom ? " · " + s.fandom : "") + " · " + s.status + (s.published === false ? " · ส่วนตัว" : "")),
-      el("div", { class:"sum" }, blocks(s.summary)),
+      el("div", { class:"sum" }, blocks(s.summary)), ratingBox(id),
       el("div", { class:"row" },
-        s.chapters.length ? el("a", { class:"btn primary", href:"#/read/" + id + "/" + (at || 0) }, at ? "Continue chapter " + (at + 1) : "Start reading") : el("span", { class:"soft" }, "No chapters yet."),
+        s.chapters.length ? el("a", { class:"btn primary", href:"#/read/" + id + "/" + (at || 0) }, has ? "Continue chapter " + (at + 1) + (sp && sp.ch === at && sp.y > 0.02 ? " (" + Math.round(sp.y * 100) + "%)" : "") : "Start reading") : el("span", { class:"soft" }, "No chapters yet."),
         el("button", { class:"btn", type:"button", onclick:() => { db.lib = inLib ? db.lib.filter(x => x !== id) : [...db.lib, id]; save(); route(); } }, inLib ? "Remove from library" : "Add to library"),
         isAdmin() ? el("a", { class:"btn", href:"#/edit/" + id }, "Edit story") : ""))),
     el("h2", {}, "Chapters (" + s.chapters.length + ")"),
-    el("ul", { class:"chlist" }, s.chapters.map((c, i) => el("li", {}, el("a", { href:"#/read/" + id + "/" + i }, c.title), isAdmin() ? el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit") : ""))),
-    isAdmin() ? el("a", { class:"btn primary", href:"#/chapter/" + id + "/new" }, "+ Add chapter") : "");
+    el("ul", { class:"chlist" }, s.chapters.map((c, i) => el("li", {}, el("a", { href:"#/read/" + id + "/" + i }, c.title), has && i === at ? el("span", { class:"small" }, "\ud83d\udd16 last read") : "", isAdmin() ? el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit") : ""))),
+    isAdmin() ? el("a", { class:"btn primary", href:"#/chapter/" + id + "/new" }, "+ Add chapter") : "",
+    commentsBox(s, 0));
 }
 
 function pRead(id, n) {
   const s = getS(id); if (!s || !s.chapters.length) return nf();
   const i = Math.max(0, Math.min(s.chapters.length - 1, +n || 0)), c = s.chapters[i];
   db.progress[id] = i; save(); title(c.title + " – " + s.title);
-  const to = k => go("#/read/" + id + "/" + k);
+  const to = k => { delete db.scroll[id]; go("#/read/" + id + "/" + k); };
   const jump = el("select", { "aria-label":"Jump to chapter", onchange:e => to(+e.target.value) },
     s.chapters.map((x, k) => { const o = el("option", { value:k }, x.title); if (k === i) o.selected = true; return o; }));
   const prev = el("button", { class:"btn", type:"button", onclick:() => to(i - 1) }, "Previous");
@@ -417,8 +471,13 @@ function pRead(id, n) {
         el("button", { class:"btn", type:"button", "aria-label":"Larger text", onclick:() => size(1) }, "A+"))),
     el("h1", { style:"margin-top:22px" }, c.title), el("p", { class:"meta" }, "by " + s.author),
     el("article", { class:"text" }, blocks(c.text, c.notes)),
-    el("div", { class:"nav" }, prev, jump, next),
+    el("div", { class:"nav" }, prev, jump, next), el("h2", {}, "Enjoying this story?"), ratingBox(id), commentsBox(s, i + 1),
     isAdmin() ? el("p", {}, el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit this chapter")) : "");
+  const p = db.scroll[id];
+  requestAnimationFrame(() => {
+    const a = document.querySelector("article.text");
+    window.scrollTo(0, p && p.ch === i && p.y > 0.02 && a ? a.getBoundingClientRect().top + scrollY + p.y * a.offsetHeight : 0);
+  });
 }
 
 function pLibrary() {
