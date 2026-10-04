@@ -431,7 +431,7 @@ window.addEventListener("scroll", () => {
 const SHOP = '<svg class="shop" viewBox="0 0 220 170" aria-hidden="true"><path d="M186 16a15 15 0 1 0 8 27a12 12 0 1 1-8-27z" fill="#ffe28a"/><path d="M30 28l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#ffe28a"/><path d="M150 22l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#ffe28a"/><path d="M204 96l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#ffe28a"/><rect x="38" y="74" width="144" height="86" rx="10" fill="#fff4fa" stroke="#d9b8ee" stroke-width="3"/><path d="M30 76L44 48H176L190 76Z" fill="#f7b6d2"/><path d="M72 48h22l-3 28H69zM120 48h22l3 28h-22z" fill="#fff"/><path d="M30 76a11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0 11 11 0 0 0 22 0z" fill="#f7b6d2"/><rect x="48" y="100" width="30" height="34" rx="6" fill="#ffefb0"/><rect x="142" y="100" width="30" height="34" rx="6" fill="#ffefb0"/><path d="M63 100v34M48 117h30M157 100v34M142 117h30" stroke="#e7c76a" stroke-width="2"/><path d="M92 160v-38a18 18 0 0 1 36 0v38z" fill="#b99be8"/><circle cx="121" cy="141" r="2.5" fill="#ffe28a"/><rect x="20" y="160" width="180" height="6" rx="3" fill="#cdb4ee"/></svg>';
 function heroBox() {
   const d = document.createElement("section"); d.className = "hero";
-  d.innerHTML = '<div><h1>Step into the secret bookshop</h1><p>เปิดประตู หยิบนิยายสักเล่ม แล้วอยู่อ่านด้วยกัน</p><p class="soft">Browse by genre, save favourites to your library, and pick up where you left off.</p></div>' + SHOP;
+  d.innerHTML = '<div><h1>Welcome to the secret archive</h1><p>ข้าวหอมห้ามป่วนเว็บเดี๋ยวมันแตก</p><p class="soft">Browse by genre, save favourites to your library, and pick up where you left off.</p></div>' + SHOP;
   return d;
 }
 function pHome() {
@@ -447,7 +447,7 @@ function pHome() {
 }
 
 function pBrowse(g, q) {
-  g = g || "All"; q = q || ""; title(g + " – Marginalia");
+  g = g || "All"; q = q || ""; title(g + " – Imaginarium Theatre");
   const list = el("div");
   const draw = () => {
     const k = q.toLowerCase();
@@ -460,7 +460,7 @@ function pBrowse(g, q) {
 
 function pStory(id) {
   const s = getS(id); if (!s) return nf();
-  title(s.title + " – Marginalia");
+  title(s.title + " – Imaginarium Theatre");
   const at = db.progress[id], has = at !== undefined, sp = db.scroll[id], inLib = db.lib.includes(id);
   app.replaceChildren(
     el("div", { class:"detail" }, cover(s), el("div", {},
