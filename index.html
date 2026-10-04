@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Imaginarium Theatre – read fics online</title>
+<title>Marginalia – read novels online</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Jost:wght@400;500;600&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Bai+Jamjuree:wght@400;500;600;700&family=Sarabun:wght@400;600&family=Noto+Serif+Thai:wght@400;600&family=Trirong:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Pacifico&family=Mali:wght@500;700&family=Pridi:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600&family=IBM+Plex+Sans+Thai:wght@400;600&family=Anuphan:wght@400;600&family=Prompt:wght@400;600&family=Kanit:wght@400;500&family=Niramit:wght@400;600&family=K2D:wght@400;600&family=Krub:wght@400;600&family=Athiti:wght@400;600&family=Mitr:wght@400;500&family=Taviraj:wght@400;600&family=Maitree:wght@400;600&family=Itim&family=Charmonman:wght@400;700&display=swap" rel="stylesheet">
@@ -102,11 +102,12 @@ header nav a,.btn,.chip{letter-spacing:.03em}
 .rate .small{margin-left:8px}
 .social{margin-top:40px;border-top:1px solid var(--line);padding-top:8px}
 .cmt{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:10px 16px;margin:12px 0}.cmt p{margin:6px 0 0;white-space:pre-wrap}
+.cmt .small{cursor:pointer}.cmt button.small{margin-right:14px}.cmt .like.on{color:#d6336c;font-weight:600}.cmt.reply{margin:10px 0 0 18px;border-left:3px solid var(--accent);background:var(--bg)}
 </style>
 </head>
 <body>
 <header><div class="bar">
-  <a class="brand" href="#/">Imaginarium Theatre</a>
+  <a class="brand" href="#/">Marginalia</a>
   <nav aria-label="Main">
     <a href="#/" data-k="home">Home</a><a href="#/browse/All" data-k="browse">Browse</a>
     <a href="#/library" data-k="library">Library</a><a href="#/write" data-k="write">Write</a>
@@ -380,15 +381,40 @@ function ratingBox(id) {
 function commentsBox(s, chNum) {
   const list = el("div", {}), nameI = inp(localStorage.getItem("marginalia_name") || ""), msg = area("", 3);
   nameI.maxLength = 40; nameI.placeholder = "Your name (optional)"; msg.maxLength = 1000; msg.placeholder = "Tell the author how this story made you feel\u2026";
-  const draw = d => list.replaceChildren(...(d.comments.length ? d.comments.map(c => el("div", { class:"cmt" },
-    el("b", {}, c.name), el("span", { class:"small" }, " \u00b7 " + (c.ch ? "Ch. " + c.ch + " \u00b7 " : "") + new Date(c.ts).toLocaleDateString()),
-    isAdmin() ? el("button", { class:"small", type:"button", style:"float:right", onclick:async () => { if (!confirm("Delete this comment?")) return; try { draw(await jf("/api/comments", { story:s.id, delete:c.id }, { "x-admin-password":pw })); } catch (e) { alert(e.message); } } }, "Delete") : "",
-    el("p", {}, c.text))) : [el("p", { class:"soft" }, "No comments yet. Be the first!")]));
-  const post = el("button", { class:"btn primary", type:"button", onclick:async () => {
-    if (!msg.value.trim()) return;
-    try { localStorage.setItem("marginalia_name", nameI.value.trim()); draw(await jf("/api/comments", { story:s.id, name:nameI.value, text:msg.value, ch:chNum })); msg.value = ""; } catch (e) { alert(e.message); }
-  } }, "Post comment");
-  jf("/api/comments?story=" + encodeURIComponent(s.id)).then(draw).catch(() => list.replaceChildren(el("p", { class:"soft" }, "Comments are not available yet.")));
+  const send = async (body, after) => {
+    try { localStorage.setItem("marginalia_name", body.name.trim()); draw(await jf("/api/comments", { story:s.id, vid, ...body })); after(); } catch (e) { alert(e.message); }
+  };
+  const replyForm = (c, slot) => {
+    const n = inp(nameI.value || localStorage.getItem("marginalia_name") || ""), t = area("", 2);
+    n.maxLength = 40; n.placeholder = "Your name (optional)"; t.maxLength = 1000; t.placeholder = "Reply to " + c.name + "\u2026";
+    slot.replaceChildren(n, t, el("div", { class:"row", style:"margin:0 0 8px" },
+      el("button", { class:"btn primary", type:"button", onclick:() => { if (t.value.trim()) send({ name:n.value, text:t.value, parent:c.id }, () => {}); } }, "Post reply"),
+      el("button", { class:"btn", type:"button", onclick:() => slot.replaceChildren() }, "Cancel")));
+    t.focus();
+  };
+  const likeBtn = c => {
+    const b = el("button", { class:"small like", type:"button" });
+    const paint = () => { b.textContent = (c.liked ? "\u2665" : "\u2661") + " Like" + (c.likes ? " \u00b7 " + c.likes : ""); b.classList.toggle("on", !!c.liked); b.setAttribute("aria-pressed", String(!!c.liked)); };
+    const flip = () => { c.liked = !c.liked; c.likes = Math.max(0, (c.likes || 0) + (c.liked ? 1 : -1)); paint(); };
+    b.addEventListener("click", async () => { flip(); try { await jf("/api/comments", { story:s.id, vid, like:c.id }); } catch (e) { flip(); alert(e.message); } });
+    paint(); return b;
+  };
+  const draw = d => {
+    const all = d.comments, kids = id => all.filter(c => c.parent === id).sort((a, b) => a.ts - b.ts);
+    const item = (c, reply) => {
+      const slot = el("div", {});
+      return el("div", { class:"cmt" + (reply ? " reply" : "") },
+        el("b", {}, c.name), el("span", { class:"small" }, " \u00b7 " + (!reply && c.ch ? "Ch. " + c.ch + " \u00b7 " : "") + new Date(c.ts).toLocaleDateString()),
+        isAdmin() ? el("button", { class:"small", type:"button", style:"float:right", onclick:async () => { if (!confirm("Delete this comment" + (reply ? "?" : " and its replies?"))) return; try { draw(await jf("/api/comments", { story:s.id, vid, delete:c.id }, { "x-admin-password":pw })); } catch (e) { alert(e.message); } } }, "Delete") : "",
+        el("p", {}, c.text),
+        likeBtn(c), reply ? "" : el("button", { class:"small", type:"button", onclick:() => replyForm(c, slot) }, "Reply"),
+        slot, ...(reply ? [] : kids(c.id).map(r => item(r, true))));
+    };
+    const tops = all.filter(c => !c.parent);
+    list.replaceChildren(...(tops.length ? tops.map(c => item(c, false)) : [el("p", { class:"soft" }, "No comments yet. Be the first!")]));
+  };
+  const post = el("button", { class:"btn primary", type:"button", onclick:() => { if (msg.value.trim()) send({ name:nameI.value, text:msg.value, ch:chNum }, () => { msg.value = ""; }); } }, "Post comment");
+  jf("/api/comments?story=" + encodeURIComponent(s.id) + "&vid=" + vid).then(draw).catch(() => list.replaceChildren(el("p", { class:"soft" }, "Comments are not available yet.")));
   return el("section", { class:"social" }, el("h2", {}, "Comments"), field("Name", nameI), field("Comment", msg), post, list);
 }
 let scrollTimer;
