@@ -105,6 +105,13 @@ header nav a,.btn,.chip{letter-spacing:.03em}
 .social{margin-top:40px;border-top:1px solid var(--line);padding-top:8px}
 .cmt{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:10px 16px;margin:12px 0}.cmt p{margin:6px 0 0;white-space:pre-wrap}
 .cmt .small{cursor:pointer}.cmt button.small{margin-right:14px}.cmt .like.on{color:#d6336c;font-weight:600}.cmt.reply{margin:10px 0 0 18px;border-left:3px solid var(--accent);background:var(--bg)}
+.avatar{width:130px;height:130px;border-radius:50%;display:grid;place-items:center;font:600 2.4rem var(--head,Georgia);color:#3f3052;border:3px solid var(--card);box-shadow:0 6px 14px -6px rgba(110,70,160,.45)}
+.avatar.big{width:160px;height:160px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:22px;margin:18px 0}
+.ccard{text-decoration:none;text-align:center;display:grid;gap:6px;justify-items:center}
+.cdetail{display:grid;grid-template-columns:160px 1fr;gap:24px;align-items:center;margin:18px 0}
+@media(max-width:560px){.cdetail{grid-template-columns:1fr;justify-items:start}}
+.cquote{margin:10px 0;padding:6px 16px;border-left:4px solid var(--accent);font-style:italic;color:var(--soft)}
 </style>
 </head>
 <body>
@@ -472,6 +479,7 @@ function pStory(id) {
       el("div", { class:"row" },
         s.chapters.length ? el("a", { class:"btn primary", href:"#/read/" + id + "/" + (at || 0) }, has ? "Continue chapter " + (at + 1) + (sp && sp.ch === at && sp.y > 0.02 ? " (" + Math.round(sp.y * 100) + "%)" : "") : "Start reading") : el("span", { class:"soft" }, "No chapters yet."),
         el("button", { class:"btn", type:"button", onclick:() => { db.lib = inLib ? db.lib.filter(x => x !== id) : [...db.lib, id]; save(); route(); } }, inLib ? "Remove from library" : "Add to library"),
+        ((s.characters && s.characters.length) || isAdmin()) ? el("a", { class:"btn", href:"#/characters/" + id }, icon("users"), "Characters" + (s.characters && s.characters.length ? " (" + s.characters.length + ")" : "")) : "",
         isAdmin() ? el("a", { class:"btn", href:"#/edit/" + id }, "Edit story") : ""))),
     el("h2", {}, "Chapters (" + s.chapters.length + ")"),
     el("ul", { class:"chlist" }, s.chapters.map((c, i) => el("li", {}, el("a", { href:"#/read/" + id + "/" + i }, c.title), has && i === at ? el("span", { class:"small" }, "\ud83d\udd16 last read") : "", isAdmin() ? el("a", { class:"small", href:"#/chapter/" + id + "/" + i }, "Edit") : ""))),
@@ -660,15 +668,97 @@ function pChapter(id, n) {
 }
 
 /* ---------- Router ---------- */
+/* ---------- Characters ---------- */
+ICONS.users = '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5a5 5 0 0 1 4.5 5"/>';
+const ROLES = ["Main character", "Supporting", "Love interest", "Antagonist", "Mentor", "Side character"];
+const CHAR_FIELDS = [["appearance", "Appearance"], ["personality", "Personality"], ["background", "Background"], ["abilities", "Abilities & skills"], ["relationships", "Relationships"]];
+function avatar(c, cls) {
+  const [a, b] = autoColors(c.name || "x"), d = el("div", { class:"avatar " + (cls || "") });
+  if (c.image) d.style.background = 'url("' + c.image.replace(/"/g, "%22") + '") center/cover';
+  else { d.style.background = "linear-gradient(160deg," + a + "," + b + ")"; d.append(Array.from(c.name || "?")[0]); }
+  return d;
+}
+const paras = t => String(t || "").split(/\n+/).filter(Boolean).map(p => el("p", {}, p));
+
+function pCharacters(id) {
+  const s = getS(id); if (!s) return nf();
+  const list = s.characters || [];
+  title("Characters – " + s.title + " – Imaginarium Theatre");
+  app.replaceChildren(
+    el("a", { href:"#/story/" + id }, "← " + s.title),
+    el("h1", { style:"margin-top:18px" }, "Characters"),
+    list.length ? el("div", { class:"cgrid" }, list.map(c => el("a", { class:"ccard", href:"#/character/" + id + "/" + c.id }, avatar(c), el("b", {}, c.name), el("span", { class:"small" }, c.role || "")))) : el("p", { class:"empty" }, "No characters have been added yet."),
+    isAdmin() ? el("a", { class:"btn primary", href:"#/charedit/" + id + "/new" }, "+ Add character") : "");
+}
+
+function pCharacter(id, cid) {
+  const s = getS(id), c = s && (s.characters || []).find(x => x.id === cid); if (!c) return nf();
+  title(c.name + " – " + s.title + " – Imaginarium Theatre");
+  const meta = [c.nickname && "aka " + c.nickname, c.role, c.age && "Age " + c.age, c.occupation].filter(Boolean).join(" · ");
+  const traits = (c.traits || "").split(/[,，、]/).map(x => x.trim()).filter(Boolean);
+  app.replaceChildren(
+    el("a", { href:"#/characters/" + id }, "← All characters"),
+    el("div", { class:"cdetail" }, avatar(c, "big"), el("div", {},
+      el("h1", {}, c.name), meta ? el("p", { class:"meta" }, meta) : "",
+      c.quote ? el("blockquote", { class:"cquote" }, c.quote) : "",
+      traits.length ? el("div", { class:"chips" }, traits.map(t => el("span", { class:"chip" }, t))) : "")),
+    CHAR_FIELDS.filter(([k]) => c[k]).map(([k, label]) => el("section", {}, el("h2", {}, label), paras(c[k]))),
+    isAdmin() ? el("div", { class:"row" }, el("a", { class:"btn", href:"#/charedit/" + id + "/" + cid }, "Edit character")) : "");
+}
+
+function pCharEdit(id, cid) {
+  const s = getS(id); if (!s) return nf();
+  const isNew = cid === "new";
+  const c = isNew ? { id:"c" + Date.now().toString(36), name:"", role:ROLES[0] } : (s.characters || []).find(x => x.id === cid);
+  if (!c) return nf();
+  title((isNew ? "Add character" : "Edit character") + " – Imaginarium Theatre");
+  const F = { name:inp(c.name), nick:inp(c.nickname), role:sel(ROLES, c.role || ROLES[0]), age:inp(c.age), occ:inp(c.occupation), quote:inp(c.quote), traits:inp(c.traits) };
+  F.traits.placeholder = "brave, stubborn, loyal";
+  const T = {}; CHAR_FIELDS.forEach(([k]) => { T[k] = area(c[k], k === "personality" || k === "background" ? 5 : 3); });
+  let image = c.image || "";
+  const photo = el("div", { class:"nbox" });
+  const drawPhoto = () => photo.replaceChildren(el("h2", { style:"margin-top:0" }, "Photo"),
+    avatar({ name:F.name.value || "?", image }, "big"),
+    el("div", { class:"f", style:"margin-top:12px" }, el("span", {}, "Choose a picture from your device (optional)"),
+      el("input", { type:"file", accept:"image/*", "aria-label":"Upload a character photo", onchange:async e => {
+        const f = e.target.files[0]; if (!f) return;
+        try { image = await shrink(f, 520); drawPhoto(); } catch (x) { alert("Could not read that picture. Please try a JPG or PNG."); }
+      } })),
+    image ? el("button", { class:"btn", type:"button", onclick:() => { image = ""; drawPhoto(); } }, "Remove photo") : "");
+  drawPhoto();
+  const doSave = async () => {
+    if (!F.name.value.trim()) { alert("Please add the character's name."); return; }
+    const out = { id:c.id, name:F.name.value.trim(), nickname:F.nick.value.trim(), role:F.role.value, age:F.age.value.trim(), occupation:F.occ.value.trim(), quote:F.quote.value.trim(), traits:F.traits.value.trim() };
+    if (image) out.image = image;
+    CHAR_FIELDS.forEach(([k]) => { out[k] = T[k].value.trim(); });
+    s.characters = s.characters || [];
+    const at = s.characters.findIndex(x => x.id === c.id);
+    if (at >= 0) s.characters[at] = out; else s.characters.push(out);
+    if (await saveStory(s)) go("#/character/" + id + "/" + c.id);
+  };
+  const del = !isNew ? el("button", { class:"btn danger", type:"button", onclick:async () => {
+    if (!confirm("Delete this character?")) return;
+    s.characters = (s.characters || []).filter(x => x.id !== c.id);
+    if (await saveStory(s)) go("#/characters/" + id);
+  } }, "Delete character") : "";
+  app.replaceChildren(el("h1", {}, isNew ? "Add character" : "Edit character"), el("p", { class:"meta" }, s.title), photo,
+    field("Name", F.name), field("Nickname / also known as", F.nick), field("Role in the story", F.role), field("Age", F.age),
+    field("Species / occupation", F.occ), field("Favorite line or quote", F.quote), field("Personality keywords (separate with commas)", F.traits),
+    field("Appearance", T.appearance), field("Personality", T.personality), field("Background (history, family, where they come from)", T.background),
+    field("Abilities & skills", T.abilities), field("Relationships (who they are close to, rivals, family)", T.relationships),
+    el("div", { class:"row" }, el("button", { class:"btn primary", type:"button", onclick:doSave }, "Save character"), el("a", { class:"btn", href:isNew ? "#/characters/" + id : "#/character/" + id + "/" + cid }, "Cancel"), del));
+}
+
 function route() {
   if (!db.stories) return;
   const p = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
   const k = p[0] || "home";
-  if (!isAdmin() && (k === "edit" || k === "chapter")) { go("#/write"); return; }
+  if (!isAdmin() && (k === "edit" || k === "chapter" || k === "charedit")) { go("#/write"); return; }
   document.querySelectorAll("header nav a").forEach(a => a.setAttribute("aria-current", a.dataset.k === k || (a.dataset.k === "write" && (k === "edit" || k === "chapter")) ? "page" : "false"));
   window.scrollTo(0, 0);
   ({ home:pHome, browse:() => pBrowse(p[1], p[2]), story:() => pStory(p[1]), read:() => pRead(p[1], p[2]),
-     library:pLibrary, write:pWrite, edit:() => pEdit(p[1]), chapter:() => pChapter(p[1], p[2]) }[k] || pHome)();
+     library:pLibrary, write:pWrite, edit:() => pEdit(p[1]), chapter:() => pChapter(p[1], p[2]),
+     characters:() => pCharacters(p[1]), character:() => pCharacter(p[1], p[2]), charedit:() => pCharEdit(p[1], p[2]) }[k] || pHome)();
 }
 addEventListener("hashchange", route);
 
