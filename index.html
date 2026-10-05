@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,600;1,400&family=Jost:wght@400;500;600&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Bai+Jamjuree:wght@400;500;600;700&family=Sarabun:wght@400;600&family=Noto+Serif+Thai:wght@400;600&family=Trirong:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Pacifico&family=Mali:wght@500;700&family=Pridi:wght@500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600&family=IBM+Plex+Sans+Thai:wght@400;600&family=Anuphan:wght@400;600&family=Prompt:wght@400;600&family=Kanit:wght@400;500&family=Niramit:wght@400;600&family=K2D:wght@400;600&family=Krub:wght@400;600&family=Athiti:wght@400;600&family=Mitr:wght@400;500&family=Taviraj:wght@400;600&family=Maitree:wght@400;600&family=Itim&family=Charmonman:wght@400;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
 <style>
 :root{--read:"Bai Jamjuree",Literata,Georgia,serif;--bg:#f6f4fb;--card:#fff;--ink:#241b3a;--soft:#6b6485;--line:#ded9ec;--accent:#5b4bdb;--ai:#fff;--size:19px}
 :root[data-theme=dark]{--bg:#14121f;--card:#1d1a2e;--ink:#e8e3f5;--soft:#9d96b8;--line:#2e2a45;--accent:#9c8cff;--ai:#14121f}
@@ -132,7 +132,7 @@ const FONTS = {
 };
 ["Noto Sans Thai","IBM Plex Sans Thai","Anuphan","Prompt","Kanit","Niramit","K2D","Krub","Athiti","Mitr"].forEach(f => { FONTS[f] = '"' + f + '","Noto Sans Thai",sans-serif'; });
 ["Taviraj","Maitree","Pridi","Mali","Itim","Charmonman"].forEach(f => { FONTS[f] = '"' + f + '","Bai Jamjuree",Georgia,serif'; });
-FONTS["Google Sans Flex"] = '"Google Sans Flex","Noto Sans Thai",sans-serif'; // Latin letters only; Thai text uses Noto Sans Thai
+FONTS["Google Sans"] = '"Google Sans","Noto Sans Thai",sans-serif'; // Latin letters only; Thai text uses Noto Sans Thai
 
 /* Starter stories. Once you publish your own stories.json file
    (see the Write page), the site uses that instead. */
@@ -238,7 +238,7 @@ function applyTheme() {
 }
 themeBtn.addEventListener("click", () => { db.theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; save(); applyTheme(); });
 
-const COVER_FONTS = ["Cormorant Garamond","Playfair Display","Pacifico","Mali","Pridi","Trirong","Bai Jamjuree","Sarabun","Noto Serif Thai","Jost"];
+const COVER_FONTS = ["Cormorant Garamond","Playfair Display","Pacifico","Mali","Pridi","Trirong","Bai Jamjuree","Sarabun","Noto Serif Thai","Jost","Charmonman"];
 function hex(h, s, l) { s /= 100; l /= 100; const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, "0"); }; return "#" + f(0) + f(8) + f(4); }
 function autoColors(t) { let h = 0; for (const c of t || "x") h = (h * 31 + c.charCodeAt(0)) % 360; return [hex(h, 80, 84), hex((h + 50) % 360, 75, 74)]; }
 function cover(s) {
