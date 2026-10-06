@@ -105,6 +105,18 @@ header nav a,.btn,.chip{letter-spacing:.03em}
 .social{margin-top:40px;border-top:1px solid var(--line);padding-top:8px}
 .cmt{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:10px 16px;margin:12px 0}.cmt p{margin:6px 0 0;white-space:pre-wrap}
 .cmt .small{cursor:pointer}.cmt button.small{margin-right:14px}.cmt .like.on{color:#d6336c;font-weight:600}.cmt.reply{margin:10px 0 0 18px;border-left:3px solid var(--accent);background:var(--bg)}
+.vn{position:relative;aspect-ratio:16/9;max-width:960px;margin:0 auto;border-radius:18px;overflow:hidden;background:#222;cursor:pointer;user-select:none}
+@media(max-width:640px){.vn{aspect-ratio:3/4}}
+.vn .bg{position:absolute;inset:0}
+.vn .sp{position:absolute;bottom:0;max-height:88%;max-width:36%;object-fit:contain;pointer-events:none}
+.vn .sp.left{left:4%}.vn .sp.center{left:50%;transform:translateX(-50%)}.vn .sp.right{right:4%}
+.vn .box{position:absolute;left:3%;right:3%;bottom:4%;background:rgba(20,16,30,.8);color:#fff;border-radius:14px;padding:16px 18px 18px;min-height:5em;font-family:var(--read);font-size:1.05rem;line-height:1.55}
+.vn .who{position:absolute;top:-1em;left:14px;background:var(--accent);color:#fff;border-radius:10px;padding:2px 14px;font-weight:600;font-size:.95rem}
+.vn .hint{position:absolute;right:14px;bottom:6px;font-size:.8rem;opacity:.7}
+.vn .choices{position:absolute;left:8%;right:8%;top:42%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
+.vn .choices .btn{background:rgba(255,255,255,.94);color:#3f3052;justify-content:center}
+.vn .vnend{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff}
+.vnbar{display:flex;gap:8px;flex-wrap:wrap;max-width:960px;margin:12px auto 0}
 </style>
 </head>
 <body>
@@ -161,7 +173,7 @@ const SEED = [
 let db = { stories:null, edited:false, lib:[], progress:{}, theme:null, size:19, font:"EB Garamond" };
 try { Object.assign(db, JSON.parse(localStorage.getItem("marginalia2") || "{}")); } catch (e) {}
 if (db.fv !== 2) { db.font = "EB Garamond"; db.fv = 2; }
-db.scroll = db.scroll || {};
+db.scroll = db.scroll || {}; db.vnSave = db.vnSave || {};
 const save = () => { try { const o = {...db}; o.stories = null; delete o.edited; localStorage.setItem("marginalia2", JSON.stringify(o)); } catch (e) { if (!save.warned) { save.warned = true; alert("Your browser storage is full, so recent changes may not be saved. Download a full backup in Write, and use fewer or smaller pictures."); } } };
 const PW_KEY = "marginalia_admin";
 let pw = localStorage.getItem(PW_KEY) || "", ready = false;
@@ -275,7 +287,7 @@ function coverEditor(ti, cv) {
 }
 function tile(s, ch) {
   return el("a", { class:"tile", href: ch !== undefined ? "#/read/" + s.id + "/" + ch : "#/story/" + s.id },
-    cover(s), el("b", {}, s.title), el("span", { class:"meta" }, genresOf(s).join(", ") + " · " + s.chapters.length + " ch." + (s.published === false ? " · ส่วนตัว" : "")));
+    cover(s), el("b", {}, s.title), el("span", { class:"meta" }, genresOf(s).join(", ") + " · " + (s.type === "vn" ? "visual novel" : s.chapters.length + " ch.") + (s.published === false ? " · ส่วนตัว" : "")));
 }
 const grid = items => el("div", { class:"grid" }, items);
 const section = (t, body) => el("section", {}, el("h2", {}, icon("sparkle"), t), body);
@@ -462,6 +474,7 @@ function pBrowse(g, q) {
 
 function pStory(id) {
   const s = getS(id); if (!s) return nf();
+  if (s.type === "vn") return pVNStory(s);
   title(s.title + " – Imaginarium Theatre");
   const at = db.progress[id], has = at !== undefined, sp = db.scroll[id], inLib = db.lib.includes(id);
   app.replaceChildren(
@@ -550,7 +563,7 @@ function pWrite() {
     el("h1", {}, "Write"),
     note ? el("p", { class:"help", role:"status" }, note) : "",
     el("p", { class:"soft" }, "Everything you save here goes live immediately. Stories marked ส่วนตัว are visible only to you."),
-    el("div", { class:"row" }, el("a", { class:"btn primary", href:"#/edit/new" }, "+ New story")),
+    el("div", { class:"row" }, el("a", { class:"btn primary", href:"#/edit/new" }, "+ New story"), el("a", { class:"btn", href:"#/edit/new-vn" }, "+ New visual novel")),
     el("h2", {}, "Your stories"),
     el("ul", { class:"chlist" }, db.stories.map(s => {
       const pub = s.published !== false;
@@ -575,8 +588,8 @@ function pWrite() {
 }
 
 function pEdit(id) {
-  const isNew = id === "new";
-  const s = isNew ? { title:"", author:"", genre:GENRES[0], fandom:"", status:"Ongoing", summary:"", chapters:[], published:false } : getS(id);
+  const isNew = id === "new" || id === "new-vn";
+  const s = isNew ? { title:"", author:"", genre:GENRES[0], fandom:"", status:"Ongoing", summary:"", chapters:[], published:false, ...(id === "new-vn" ? { type:"vn", vn:{ assets:{}, scenes:[] } } : {}) } : getS(id);
   if (!s) return nf();
   title((isNew ? "New story" : "Edit story") + " – Imaginarium Theatre");
   const cv = { ...(s.cover || {}) };
@@ -596,7 +609,7 @@ function pEdit(id) {
       if (!F.t.value.trim()) { alert("Please add a title."); return; }
       Object.assign(s, { title:F.t.value.trim(), author:F.a.value.trim() || "Anonymous", genres:[...pickedG], genre:[...pickedG][0] || GENRES[0], fandom:F.f.value.trim(), status:F.st.value, summary:F.sum.value.trim(), cover:Object.keys(cv).length ? cv : undefined, updated:Date.now() });
       if (isNew) { s.id = (s.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "story") + "-" + Date.now().toString(36); db.stories.unshift(s); }
-      if (await saveStory(s)) go("#/story/" + s.id);
+      if (await saveStory(s)) go(s.type === "vn" && isNew ? "#/vn/" + s.id : "#/story/" + s.id);
     } }, "Save story"), el("a", { class:"btn", href:isNew ? "#/write" : "#/story/" + id }, "Cancel"), del));
 }
 
@@ -660,15 +673,151 @@ function pChapter(id, n) {
 }
 
 /* ---------- Router ---------- */
+/* ---------- Visual novel: story page, player, editor ---------- */
+function pVNStory(s) {
+  const id = s.id, sv = db.vnSave[id], inLib = db.lib.includes(id);
+  title(s.title + " – Imaginarium Theatre");
+  app.replaceChildren(
+    el("div", { class:"detail" }, cover(s), el("div", {},
+      el("h1", {}, s.title),
+      el("p", { class:"meta" }, "by " + s.author + " · Visual novel · " + genresOf(s).join(", ") + (s.published === false ? " · ส่วนตัว" : "")),
+      el("div", { class:"sum" }, blocks(s.summary)), ratingBox(id),
+      el("div", { class:"row" },
+        el("a", { class:"btn primary", href:"#/play/" + id }, sv ? "Continue" : "Play"),
+        sv ? el("a", { class:"btn", href:"#/play/" + id + "/new" }, "New game") : "",
+        el("button", { class:"btn", type:"button", onclick:() => { db.lib = inLib ? db.lib.filter(x => x !== id) : [...db.lib, id]; save(); route(); } }, inLib ? "Remove from library" : "Add to library"),
+        isAdmin() ? el("a", { class:"btn", href:"#/vn/" + id }, "Edit scenes") : "",
+        isAdmin() ? el("a", { class:"btn", href:"#/edit/" + id }, "Story settings") : ""))),
+    commentsBox(s, 0));
+}
+async function pPlay(id, mode) {
+  const s = getS(id); if (!s || s.type !== "vn") return nf();
+  title(s.title + " – Imaginarium Theatre");
+  app.replaceChildren(el("p", { class:"soft" }, "Loading\u2026"));
+  let vn = s.vn;
+  if (!vn) { try { vn = (await jf("/api/story?id=" + encodeURIComponent(id))).vn; } catch (e) { return nf(); } }
+  if (!vn || !vn.scenes || !vn.scenes.length) { app.replaceChildren(el("p", { class:"empty" }, "This visual novel has no scenes yet."), el("a", { class:"btn", href:"#/story/" + id }, "Back")); return; }
+  if (mode === "new") delete db.vnSave[id];
+  const byId = k => vn.scenes.find(c => c.id === k), first = vn.scenes[0].id;
+  let cur = db.vnSave[id] && byId(db.vnSave[id].scene) ? { ...db.vnSave[id] } : { scene:first, line:0 };
+  const hist = [], stage = el("div", { class:"vn", tabindex:"0" });
+  const linesOf = sc => (sc.lines || "").split("\n").map(l => l.trim()).filter(Boolean).map(l => {
+    if (l[0] === ">") return { who:"", t:l.slice(1).trim() };
+    const m = l.match(/^([^:\uff1a]{1,30})[:\uff1a]\s*(.+)$/); return m ? { who:m[1].trim(), t:m[2] } : { who:"", t:l };
+  });
+  const choicesOf = sc => (sc.choices || []).filter(c => c.t);
+  const goTo = k => { hist.push({ ...cur }); cur = { scene:k && byId(k) ? k : "", line:0 }; draw(); };
+  const adv = () => {
+    if (!cur.scene) return;
+    const sc = byId(cur.scene);
+    if (cur.line < linesOf(sc).length - 1) { hist.push({ ...cur }); cur.line++; draw(); }
+    else if (!choicesOf(sc).length) goTo(sc.next);
+  };
+  const back = el("button", { class:"btn", type:"button", onclick:() => { if (hist.length) { cur = hist.pop(); draw(); } } }, "\u2190 Back");
+  const draw = () => {
+    back.disabled = !hist.length;
+    if (!cur.scene) {
+      delete db.vnSave[id]; save();
+      stage.replaceChildren(el("div", { class:"bg", style:"background:#2a2140" }), el("div", { class:"vnend" }, el("h2", {}, "\u2014 The End \u2014"),
+        el("div", { class:"row", style:"justify-content:center" },
+          el("button", { class:"btn primary", type:"button", onclick:e => { e.stopPropagation(); hist.length = 0; cur = { scene:first, line:0 }; draw(); } }, "Play again"),
+          el("a", { class:"btn", href:"#/story/" + id, onclick:e => e.stopPropagation() }, "Back to story"))));
+      return;
+    }
+    const sc = byId(cur.scene), L = linesOf(sc), line = L[cur.line] || { who:"", t:"" }, ch = choicesOf(sc), showCh = cur.line >= L.length - 1 && ch.length;
+    db.vnSave[id] = { scene:cur.scene, line:cur.line }; save();
+    const bg = el("div", { class:"bg" }), img = vn.assets && vn.assets[sc.bg];
+    bg.style.background = img ? 'url("' + img + '") center/cover' : (sc.color || "#cdb8f0");
+    const sprites = ["left", "center", "right"].filter(p => sc.sprites && vn.assets[sc.sprites[p]]).map(p => el("img", { class:"sp " + p, src:vn.assets[sc.sprites[p]], alt:"" }));
+    stage.replaceChildren(bg, ...sprites,
+      line.t || line.who ? el("div", { class:"box" }, line.who ? el("span", { class:"who" }, line.who) : "", el("div", {}, inline(line.t, {})), showCh ? "" : el("span", { class:"hint" }, "\u25b6")) : "",
+      showCh ? el("div", { class:"choices" }, ch.map(c => el("button", { class:"btn", type:"button", onclick:e => { e.stopPropagation(); goTo(c.to); } }, c.t))) : "");
+  };
+  stage.addEventListener("click", adv);
+  document.onkeydown = e => {
+    if (!location.hash.startsWith("#/play/")) return;
+    if (e.key === "ArrowLeft") back.click();
+    else if ([" ", "Enter", "ArrowRight"].includes(e.key) && !/^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(e.target.tagName)) { e.preventDefault(); adv(); }
+  };
+  app.replaceChildren(el("h1", { style:"font-size:1.5rem" }, s.title), stage,
+    el("div", { class:"vnbar" }, back,
+      el("button", { class:"btn", type:"button", onclick:() => { if (confirm("Restart from the beginning?")) { hist.length = 0; cur = { scene:first, line:0 }; draw(); } } }, "Restart"),
+      el("a", { class:"btn", href:"#/story/" + id }, "Exit")));
+  draw();
+}
+function shrinkImg(file, max, png) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, max / (png ? img.height : img.width)), c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res(png ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.78));
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+const pick = (opts, v, fn) => { const x = el("select", { class:"inp" }, opts.map(([val, lab]) => el("option", { value:val }, lab))); x.value = v || ""; x.addEventListener("change", () => fn(x.value)); return x; };
+function pVNEdit(id) {
+  const s = getS(id); if (!s || s.type !== "vn") return nf();
+  title("Visual novel – " + s.title);
+  const vn = s.vn = s.vn || { assets:{}, scenes:[] }; vn.assets = vn.assets || {};
+  const box = el("div", {}), END = "\u2014 The End \u2014";
+  const sceneOpts = () => [...vn.scenes.map((c, i) => [c.id, (i + 1) + ". " + (c.name || "Scene")]), ["", END]];
+  const render = () => {
+    const keys = Object.keys(vn.assets), bgs = keys.filter(k => k.startsWith("bg:")), chs = keys.filter(k => k.startsWith("ch:"));
+    const kb = Math.round(JSON.stringify(vn).length / 1024);
+    const up = (kind, label) => el("label", { class:"btn" }, label, el("input", { type:"file", accept:"image/*", hidden:"", onchange:async e => {
+      const f = e.target.files[0]; if (!f) return;
+      try { vn.assets[kind + ":" + f.name.replace(/\.[^.]+$/, "").slice(0, 24) + "-" + (keys.length + 1)] = await shrinkImg(f, kind === "bg" ? 800 : 420, kind === "ch"); render(); }
+      catch (x) { alert("Could not read that picture. Please try a JPG or PNG."); }
+    } }));
+    const thumbs = keys.map(k => el("div", { style:"display:inline-block;margin:0 10px 10px 0;text-align:center" },
+      el("img", { src:vn.assets[k], alt:k, style:"height:64px;display:block;border-radius:8px;background:#ddd" }),
+      el("button", { class:"small", type:"button", onclick:() => { delete vn.assets[k]; render(); } }, "Remove")));
+    const cards = vn.scenes.map((sc, n) => {
+      sc.sprites = sc.sprites || {}; sc.choices = sc.choices || [];
+      const nm = inp(sc.name); nm.addEventListener("input", () => { sc.name = nm.value; });
+      const ln = area(sc.lines, 6); ln.placeholder = "Mina: Hello there!\n> A narration line with no speaker name"; ln.addEventListener("input", () => { sc.lines = ln.value; });
+      const col = el("input", { type:"color", "aria-label":"Plain background color" }); col.value = sc.color || "#cdb8f0"; col.addEventListener("input", () => { sc.color = col.value; });
+      const rows = sc.choices.map((c, j) => { const t = inp(c.t); t.placeholder = "Choice text"; t.addEventListener("input", () => { c.t = t.value; });
+        return el("div", { class:"row", style:"margin:0 0 8px" }, t, pick(sceneOpts(), c.to, v => { c.to = v; }), el("button", { class:"small", type:"button", onclick:() => { sc.choices.splice(j, 1); render(); } }, "Remove")); });
+      return el("div", { class:"cmt" },
+        el("b", {}, "Scene " + (n + 1) + (n === 0 ? " (start)" : "")),
+        el("span", { style:"float:right" },
+          n ? el("button", { class:"small", type:"button", onclick:() => { [vn.scenes[n - 1], vn.scenes[n]] = [vn.scenes[n], vn.scenes[n - 1]]; render(); } }, "Move up  ") : "",
+          el("button", { class:"small", type:"button", onclick:() => { if (confirm("Delete this scene?")) { vn.scenes.splice(n, 1); render(); } } }, "Delete scene")),
+        field("Scene name (only you see this)", nm),
+        field("Background", el("div", { class:"row", style:"margin:0" }, pick([["", "Plain color"], ...bgs.map(k => [k, k.slice(3)])], sc.bg, v => { sc.bg = v; }), col)),
+        field("Characters", el("div", { class:"row", style:"margin:0" }, ["left", "center", "right"].map(p => pick([["", p + ": none"], ...chs.map(k => [k, p + ": " + k.slice(3)])], sc.sprites[p], v => { sc.sprites[p] = v; })))),
+        field("Dialogue (one line per tap)", ln),
+        el("div", { class:"f" }, el("span", {}, "Choices for the reader (leave empty to continue automatically)"), rows,
+          el("button", { class:"btn", type:"button", onclick:() => { sc.choices.push({ t:"", to:"" }); render(); } }, "+ Add choice")),
+        sc.choices.length ? "" : field("Then go to", pick(sceneOpts(), sc.next, v => { sc.next = v; })));
+    });
+    const saveBtn = el("button", { class:"btn primary", type:"button", onclick:async () => { if (await saveStory(s)) { saveBtn.textContent = "Saved \u2713"; setTimeout(() => { saveBtn.textContent = "Save visual novel"; }, 2000); } } }, "Save visual novel");
+    box.replaceChildren(
+      el("h2", {}, "Pictures"),
+      el("p", { class:"soft" }, "Upload each picture once, then choose it in any scene. Characters work best as PNG with a see-through background."),
+      el("div", { class:"row" }, up("bg", "+ Background"), up("ch", "+ Character")), el("div", {}, thumbs),
+      el("p", { class:kb > 900 ? "help" : "small" }, "Size: " + kb + " KB" + (kb > 900 ? " \u2014 too big to save. Remove some pictures." : " of about 900 KB")),
+      el("h2", {}, "Scenes"), ...cards,
+      el("div", { class:"row" }, el("button", { class:"btn", type:"button", onclick:() => { vn.scenes.push({ id:"s" + Date.now().toString(36) + Math.floor(Math.random() * 99), name:"", bg:"", color:"#cdb8f0", sprites:{}, lines:"", choices:[], next:"" }); render(); } }, "+ Add scene")),
+      el("div", { class:"row" }, saveBtn, el("a", { class:"btn", href:"#/play/" + id + "/new" }, "Preview"), el("a", { class:"btn", href:"#/story/" + id }, "Back to story")));
+  };
+  render();
+  app.replaceChildren(el("h1", {}, "Visual novel: " + s.title), el("p", { class:"help" }, "The first scene is where the story starts. Lines look like \u201cMina: Hello!\u201d. Start a line with > for narration."), box);
+}
+
 function route() {
   if (!db.stories) return;
   const p = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
   const k = p[0] || "home";
-  if (!isAdmin() && (k === "edit" || k === "chapter")) { go("#/write"); return; }
+  if (!isAdmin() && (k === "edit" || k === "chapter" || k === "vn")) { go("#/write"); return; }
   document.querySelectorAll("header nav a").forEach(a => a.setAttribute("aria-current", a.dataset.k === k || (a.dataset.k === "write" && (k === "edit" || k === "chapter")) ? "page" : "false"));
   window.scrollTo(0, 0);
   ({ home:pHome, browse:() => pBrowse(p[1], p[2]), story:() => pStory(p[1]), read:() => pRead(p[1], p[2]),
-     library:pLibrary, write:pWrite, edit:() => pEdit(p[1]), chapter:() => pChapter(p[1], p[2]) }[k] || pHome)();
+     library:pLibrary, write:pWrite, edit:() => pEdit(p[1]), chapter:() => pChapter(p[1], p[2]), vn:() => pVNEdit(p[1]), play:() => pPlay(p[1], p[2]) }[k] || pHome)();
 }
 addEventListener("hashchange", route);
 
